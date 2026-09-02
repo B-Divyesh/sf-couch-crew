@@ -16,7 +16,9 @@ function send(socket, message) {
 
 function clientAddress(request) {
   const forwarded = request.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.trim()) return forwarded.split(',')[0].trim();
+  // The ingress appends the connected peer address. Use that proxy-nearest
+  // value rather than a client-supplied leading X-Forwarded-For entry.
+  if (typeof forwarded === 'string' && forwarded.trim()) return forwarded.split(',').at(-1).trim();
   return request.socket.remoteAddress || 'unknown';
 }
 
