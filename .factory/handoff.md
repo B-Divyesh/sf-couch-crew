@@ -1,24 +1,36 @@
-# Couch Crew repair handoff
+# Couch Crew independent verification handoff
 
 ## Release result
 
-**PASS — repaired and deployed.**
+**FAIL — do not release candidate `07fec1d909849b67792ea1b34f973030acd615a3`.**
 
-The repaired static product source is commit `38810907d24b5c31e1f67e1732ea546725f95992` (`fix: harden realtime and deterministic replay`). A server-only follow-up, `7f9637ae39bd54a36dee559cc174518d5436f773`, keys rate limits to the proxy-nearest client address. Static production is deployed at <https://couch-crew.sociobot.in>. The product-owned realtime image is `ca45e8529f09acr.azurecr.io/sf-couch-crew-realtime:7f9637a` (digest `sha256:c90d213989e38b1fbea3c380ff1de4c3441bcba498171c981947550f044dc6dd`) and its live health response reports that exact follow-up commit.
+Independent verification ran on 2026-09-02 against <https://couch-crew.sociobot.in> for work order `couch-crew-verify-3`. The deployed game is functional and matches the candidate's runtime files, but the mandatory full quality gate fails consistently and the strict first-read/claims contracts are not met. Full evidence is in [`.factory/verification-3.md`](verification-3.md).
 
-## Repairs
+## Release blockers
 
-- Replaced the timeout-prone sequential browser click loops with deterministic scripted UI playthroughs. Full parallel `npm test` now proves the real win screen, replay reset, and all three missions without the prior 30-second failures.
-- Added an explicit realtime allowance: 60 health checks and 8 WebSocket handshakes per client per minute, keyed to the proxy-nearest client address. Excess traffic receives `429 Too Many Requests` and a positive `Retry-After`; browser upgrades accept only Couch Crew or local-development origins.
-- Upgraded runtime `ws` from 8.18.1 to 8.21.3. `npm audit --omit=dev` reports zero vulnerabilities.
-- Added immutable `buildId` to realtime health and passed the repair commit through the image build and Container App environment.
-- Made briefing, pause, win, and loss overlays modal dialogs. Focus enters the dialog, all obscured page controls are inert, and pause resume returns focus to the invoking control.
-- Expanded claims for real-mode request privacy and measured 390 px rendering rate. The unfinished-run persistence test now advances, reloads, and asserts recovered route state.
-- Removed duplicate How it works landmarks and IDs, brought the undersized controls to 44 px, added `/controller` to the sitemap, refreshed the copy audit, and configured exact SPA rewrites so unknown paths return a true 404.
+- `npm test` failed twice at 15/16 browser tests. `@claim:rendered-frame-rate` measured 31.3166 and 32.9038 fps under the committed two-worker suite, below its 50 fps minimum. Isolated and live samples pass, so the benchmark is concurrency-sensitive, but the required gate remains red.
+- The first screen says “3–6 phones” and never plainly identifies “friends in one room.” The one-click sample and live game are present, but the mandatory audience test fails.
+- `session-length` proves only the sum of maximum response windows, not an 18-minute completed session. `crew-size` claims 3–6 players but its registered test checks only six.
+- README/privacy/landing claims about origin restriction, exact rate allowances, recovery-save removal, and no chat are absent from `.factory/claims.json`.
 
-## Verification evidence
+## Other defects
 
-Local clean install and quality gates:
+- SPA navigation back to `/` leaves focus on `<body>` instead of the home `h1`.
+- Mobile footer links are 21.1 px high; Terms is 40 px wide, and the top Demo link measured 43.7 px wide. The baseline is 44×44 px.
+
+## What passed
+
+- After `npm ci`, all 15 exact claim commands pass in isolation.
+- `npm run build` passes and produces `dist/`; TypeScript passes. There is no lint script.
+- `npm audit --omit=dev` reports zero vulnerabilities.
+- A live scripted run crosses all three missions and reaches the real win screen at 48 correct moves. The loss screen, both replay paths, touch, keyboard, pause, persistence, progress, Calm pressure, sound, and Screen nudge work.
+- Live rate limits enforce 8 WebSocket handshakes and 60 health requests per client per minute; the next request returns 429 with `Retry-After: 60`. Hostile WebSocket origins return 403.
+- Demo requests are same-origin only; real play additionally opens only the product-owned realtime socket. No ordinary-flow console or page errors were observed.
+- Live axe has zero serious/critical findings on all five application routes. Reduced motion, overlay focus/inert behavior, service-worker update, and offline reload pass.
+- Lighthouse mobile: 99 Performance, 100 Accessibility, 100 Best Practices, 100 SEO; LCP 1.377 s, TBT 146.5 ms, CLS 0.0071.
+- Live static HTML, JS, CSS, service worker, and art hashes match the fresh candidate build. Realtime health reports code ancestor `7f9637a`; later candidate commits are documentation-only.
+
+## Run the verification gates
 
 ```sh
 npm ci
@@ -27,26 +39,8 @@ npm run build
 npm audit --omit=dev
 ```
 
-Results: 7 Vitest core tests, 1 realtime policy/identity test, 2 deployment-policy tests, and 16 Playwright tests passed under the committed two-worker configuration. The production build completed with 25.81 kB JS (8.95 kB gzip) and 18.47 kB CSS (4.93 kB gzip). Audit reported zero vulnerabilities.
+Current expected result: build and audit pass; `npm test` fails at the parallel frame-rate test. Evidence from the latest failure is under `test-results/game-the-live-game-renders-db65c-n-claim-rendered-frame-rate-chromium/`.
 
-Claims are registered in `.factory/claims.json`; the full test run includes every tagged claim. In particular, `@claim:complete-run` reaches the actual “The crew cleared the route” result after 48 moves, and `@claim:restart-reset` loses, restarts to `4 / 12`, then wins again.
+## Product code changes
 
-Live checks on 2026-09-02:
-
-- `verify-url.sh https://couch-crew.sociobot.in <evidence-dir>`: HTTP 200, title, `lang=en`, one h1, main landmark, zero missing image alt text, zero console/page errors; desktop and 390 px screenshots captured.
-- Live Playwright axe integration: all five public application views had zero serious/critical violations; the duplicate landmark issue is gone.
-- Live `/demo` browser checks: complete run, restart, service-worker offline reload, 390 px layout, and overlay focus/inert behavior passed (5/5).
-- `https://couch-crew.sociobot.in/definitely-missing-qa` returned HTTP 404 and the designed 404 document.
-- Fresh local and live static JavaScript SHA-256 matched: `1fe32dd600351f76ee3de725fbaae7a9977de0b32a0386eb5ccb4ef0cbe7c590`.
-- Live realtime health returned `{"service":"couch-crew-realtime","rooms":0,"buildId":"7f9637ae39bd54a36dee559cc174518d5436f773"}`.
-- Live probes against the final realtime build reached the enforced policy: health returned 429 with `Retry-After: 29`; a hostile WebSocket Origin returned 403; a permitted origin exceeded its allowance and received 429 with `Retry-After: 60`.
-
-The standalone `@axe-core/cli` launcher could not find a system Chrome binary in this container. The repository’s Playwright `@axe-core/playwright` integration ran instead, locally and against the deployed site, using the preinstalled Chromium browser.
-
-## Run and deploy
-
-For local development, run `npm run realtime` and `npm run dev` in separate terminals. Run `npm test` and `npm run build` before release. Static deployment uses `dist/`; the realtime Dockerfile accepts `BUILD_ID` and is deployed as the product-scoped `sf-couch-crew-realtime` image.
-
-## Known gaps
-
-None.
+None. This verification changed only `.factory/verification-3.md` and `.factory/handoff.md`.
