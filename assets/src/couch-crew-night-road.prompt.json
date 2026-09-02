@@ -1,0 +1,9 @@
+{
+  "generator": "/opt/fleet/lib/gen-image.sh",
+  "deployment": "factory-image",
+  "date": "2026-09-02",
+  "size": "1536x1024",
+  "quality": "high",
+  "prompt": "Use case: stylized-concept. Asset type: responsive landing-page hero and browser-game backdrop. Primary request: an original wide 16-bit demoscene pixel-art illustration of a compact fictional getaway hatchback driving on a rain-slick elevated road toward a geometric near-future city at night. Scene/backdrop: deep ink-navy sky, blocky city silhouette, wet asphalt, five abstract route signal lights. Subject: empty unbranded hatchback, low-right, viewed from a slightly elevated side angle. Style/medium: authentic low-resolution home-computer pixel art with crisp square pixels and subtle ordered dithering, no anti-aliasing, no photorealism. Composition/framing: wide cinematic layout, car low-right, large quiet negative space across left and top for an opaque game console. Lighting/mood: phosphor cyan road markers, acid-lime dashboard glow, warm amber windows, alert-coral reflection, tense but suitable for all ages. Color palette: #080b16, #12182c, #f5f0d4, #58e7f2, #c7f36b, #ffb454, #ff647c. Materials/textures: wet asphalt, dark concrete, phosphor pixels. Constraints: no people, no weapons, no readable signage, no gradients, no blur, no seams. Avoid: text, letters, numbers, logos, watermark, brands, badges, copyrighted characters, luxury car styling.",
+  "review": "Accepted. No people, text, logos, watermarks, brands, anatomical artifacts, visible seams, or recognizable copyrighted subjects. The five overhead marks are abstract geometric route signals."
+}

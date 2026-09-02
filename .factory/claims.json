@@ -1,0 +1,79 @@
+[
+  {
+    "id": "complete-run",
+    "claim": "A run reaches a win screen after three missions and 48 correct moves.",
+    "where": "game, README",
+    "test": "npm run test:e2e -- --grep @claim:complete-run",
+    "sandbox": "fresh browser context at /demo; play every called move and assert the win summary"
+  },
+  {
+    "id": "session-length",
+    "claim": "A complete run is designed for an 18-minute couch session.",
+    "where": "README",
+    "test": "npm run test:unit -- --testNamePattern @claim:session-length",
+    "sandbox": "deterministic mission data; assert all 48 prompt windows total between 17 and 18 minutes"
+  },
+  {
+    "id": "assist-mode",
+    "claim": "Calm pressure slows alarm growth.",
+    "where": "game setting, README",
+    "test": "npm run test:unit -- --testNamePattern @claim:assist-mode",
+    "sandbox": "two identical seeded games; tick regular and calm modes for five seconds and compare pressure"
+  },
+  {
+    "id": "restart-reset",
+    "claim": "Replay starts a fresh run.",
+    "where": "end screen",
+    "test": "npm run test:e2e -- --grep @claim:restart-reset",
+    "sandbox": "sample run; lose, replay, and assert the seeded sample starting state"
+  },
+  {
+    "id": "touch-keyboard",
+    "claim": "Touch and number-key controls both advance the route.",
+    "where": "landing facts, game help, README",
+    "test": "npm run test:e2e -- --grep @claim:touch-keyboard",
+    "sandbox": "fresh /demo; make one correct pointer press and one correct keyboard press"
+  },
+  {
+    "id": "crew-size",
+    "claim": "The game assigns five roles for crews of 3–6 players.",
+    "where": "landing, setup, README",
+    "test": "npm run test:e2e -- --grep @claim:crew-size",
+    "sandbox": "fresh home page; choose six players and inspect all role assignments"
+  },
+  {
+    "id": "settings-persist",
+    "claim": "Settings and an unfinished run persist in this browser.",
+    "where": "game, privacy page, README",
+    "test": "npm run test:e2e -- --grep @claim:settings-persist",
+    "sandbox": "fresh real-mode local storage; enable calm pressure, start, reload, and resume"
+  },
+  {
+    "id": "demo-isolated",
+    "claim": "Demo mode saves no game data.",
+    "where": "demo banner, privacy page, README",
+    "test": "npm run test:e2e -- --grep @claim:demo-isolated",
+    "sandbox": "fresh browser storage at /demo; play a move and assert no Couch Crew localStorage keys"
+  },
+  {
+    "id": "local-privacy",
+    "claim": "The demo makes no third-party network requests.",
+    "where": "privacy page, README",
+    "test": "npm run test:e2e -- --grep @claim:local-privacy",
+    "sandbox": "fresh browser context; record every request during the demo and require same-origin URLs"
+  },
+  {
+    "id": "offline-reload",
+    "claim": "The game reloads offline after the first visit.",
+    "where": "offline state, README",
+    "test": "npm run test:e2e -- --grep @claim:offline-reload",
+    "sandbox": "new service-worker context; visit /demo, go offline, reload, and inspect the live game"
+  },
+  {
+    "id": "free-no-account",
+    "claim": "Couch Crew is free and has no account step.",
+    "where": "landing facts, privacy page, README",
+    "test": "npm run test:e2e -- --grep @claim:free-no-account",
+    "sandbox": "fresh home page; verify no credential fields, buy links, or checkout controls"
+  }
+]

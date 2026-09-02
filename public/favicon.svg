@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Couch Crew route mark">
+  <rect width="64" height="64" fill="#080b16"/>
+  <path fill="#58e7f2" d="M8 12h32v8H16v24h24v8H8z"/>
+  <path fill="#c7f36b" d="M32 24h24v28H32v-8h16V32H32z"/>
+  <rect x="26" y="28" width="12" height="12" fill="#f5f0d4"/>
+</svg>
