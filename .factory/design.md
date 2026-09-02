@@ -60,7 +60,7 @@ With `prefers-reduced-motion`, lane travel, shake, and entrance movement stop. S
 
 ## Difficulty curve
 
-One complete run has three missions. The training mission needs 12 coordinated beats, the bridge mission needs 16, and the vault mission needs 20. Pressure rises from slow to quick. Mistimed role actions add pressure; the active role changes every beat. A run ends when the crew clears all three missions or pressure reaches 100. A regular run lasts about 18 minutes in a room; demo mode uses accelerated one-minute missions so verifiers and first-time players can see the full loop.
+One complete run has three missions. The training mission needs 12 coordinated beats, the bridge mission needs 16, and the vault mission needs 20. Pressure rises from slow to quick. Mistimed role actions add pressure; the active role changes every beat. A run ends when the crew clears all three missions or pressure reaches 100. The full prompt allowance is 17 minutes 20 seconds, with briefing time creating an 18-minute target. Demo mode uses eight-second prompt windows so verifiers can see the full loop sooner.
 
 ## Accessibility and responsive intent
 
