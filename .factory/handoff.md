@@ -1,3 +1,18 @@
+# Couch Crew handoff — FAIL (independent verification)
+
+**Do not release candidate `9d162a19d6f0c43f829490553682d84333537a6a`.** Independent verification on 2026-09-02 found three release blockers:
+
+1. The central brief requirement—separate meaningful phone controllers joined by short anonymous room codes—is not implemented. This is a shared-screen static game, as the landing page and README acknowledge.
+2. The cold desktop and 390 px first view is a landing hero, not playable game controls, violating the required browser-game first capture.
+3. `npm test` fails the registered `@claim:restart-reset` browser claim (10 of 11 browser tests pass; its loop continues clicking after the loss overlay).
+
+The exact evidence, passing checks, live/hash comparison, privacy/header checks, and remediation are in `.factory/verification.md`.
+
+The fresh production build itself succeeds and its JS/CSS/service-worker hashes match `https://couch-crew.sociobot.in` exactly. The live demo can be won and lost/restarted manually, supports offline reload, and has no serious/critical axe findings; those facts do not override the blockers above.
+
+---
+
+
 # Couch Crew handoff
 
 ## Built
