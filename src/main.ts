@@ -90,7 +90,7 @@ function homePage(): string {
     <main id="main" class="host-main">
       <section class="host-intro" aria-labelledby="home-title">
         <div><p class="eyebrow">3–6 players · 3 missions · about 18 minutes</p><h1 id="home-title" tabindex="-1">Coordinate a heist from every phone</h1><ul class="host-facts" aria-label="Game facts"><li>Anonymous rooms</li><li>Free, with no account</li><li>Keyboard fallback</li></ul></div>
-        <p>For 3–6 friends or family members in one room. Share one room code.</p>
+        <p>For 3–6 friends or family members in one room, each phone gets one role from a shared room code.</p>
         <div><a class="button secondary" href="/demo" data-link>Try it with sample data</a><form class="host-crew" data-host-crew><label for="host-size">Crew</label><select id="host-size" name="players"><option value="3">3</option><option value="4">4</option><option value="5" selected>5</option><option value="6">6</option></select><button type="submit">Set crew</button></form></div>
       </section>
       <div id="host-game" class="game-mount"></div>

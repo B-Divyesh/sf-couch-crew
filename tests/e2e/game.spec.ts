@@ -138,7 +138,10 @@ test('real play uses only Couch Crew network services @claim:real-local-privacy'
   await expect(page.locator('[data-room-code]')).not.toHaveText('DEMO');
   expect(requests.every((url) => new URL(url).origin === new URL(baseURL!).origin)).toBe(true);
   await expect.poll(() => sockets.length).toBeGreaterThan(0);
-  expect(sockets.every((url) => new URL(url).origin === 'ws://127.0.0.1:8787')).toBe(true);
+  const expectedSocketOrigin = ['127.0.0.1', 'localhost'].includes(new URL(baseURL!).hostname)
+    ? 'ws://127.0.0.1:8787'
+    : 'wss://sf-couch-crew-realtime.sociobot.in';
+  expect(sockets.every((url) => new URL(url).origin === expectedSocketOrigin)).toBe(true);
   await context.close();
 });
 
@@ -203,7 +206,7 @@ test('home route focus returns to its heading', async ({ page }) => {
 test('the first screen names the room audience and exact sample action', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await expect(page.getByText('For 3–6 friends or family members in one room. Share one room code.')).toBeVisible();
+  await expect(page.getByText('For 3–6 friends or family members in one room, each phone gets one role from a shared room code.')).toBeVisible();
   const sampleAction = page.getByRole('link', { name: 'Try it with sample data', exact: true });
   await expect(sampleAction).toBeVisible();
   expect((await sampleAction.boundingBox())!.y).toBeLessThan(844);

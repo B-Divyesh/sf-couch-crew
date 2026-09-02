@@ -56,6 +56,10 @@ npm run build
 
 `npm run build` writes the static deploy to `dist/`. The deploy root contains `index.html`, the service worker, fallback 404 page, metadata, and responsive art.
 
+## Deploy
+
+Publish `dist/` as the static site root with its included `staticwebapp.config.json`. Build `realtime/Dockerfile` from the `realtime/` directory, expose port 3000, and deploy it as the product-owned `sf-couch-crew-realtime` service. Production browsers connect only to `wss://sf-couch-crew-realtime.sociobot.in`.
+
 ## Data and privacy
 
 Real mode stores settings, aggregate run progress, and an unfinished run in local storage. Demo mode stores no game data. Phone rooms send only room signals and button presses to Couch Crew’s own WebSocket service. Real play loads no analytics, advertising, or third-party scripts. The demo makes no third-party requests.

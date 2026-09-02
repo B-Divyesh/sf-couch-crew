@@ -9,8 +9,7 @@ Audited September 2, 2026. Counts treat hyphenated terms and numerals as one wor
 | Anonymous rooms | 2 | Pass |
 | Free, with no account | 4 | Pass |
 | Keyboard fallback | 2 | Pass |
-| For 3–6 friends or family members in one room. | 9 | Pass |
-| Share one room code. | 4 | Pass |
+| For 3–6 friends or family members in one room, each phone gets one role from a shared room code. | 19 | Pass |
 | Try it with sample data | 5 | Pass |
 | How it works | 3 | Pass |
 | Coordinate three missions | 3 | Pass |
@@ -46,6 +45,6 @@ Audited September 2, 2026. Counts treat hyphenated terms and numerals as one wor
 
 ## First-screen read-aloud
 
-“Coordinate a heist from every phone. For 3–6 friends or family members in one room. Try it with sample data.”
+“Coordinate a heist from every phone. For 3–6 friends or family members in one room, each phone gets one role from a shared room code. Try it with sample data.”
 
 This states the job, audience, control difference, and first action in one breath.

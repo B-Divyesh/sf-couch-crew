@@ -232,7 +232,7 @@ kbd { display: grid; min-width: 28px; height: 28px; place-items: center; color: 
   .demo-banner { position: relative; flex-direction: column; gap: 6px; }
   .demo-main { padding: 24px 8px 64px; background-attachment: scroll; }
   .host-main { padding: 12px 8px 0; background-attachment: scroll; }
-  .host-intro { gap: 6px; padding: 10px 12px; margin-bottom: 12px; }
+  .host-intro { gap: 6px; padding: 10px 12px; margin-bottom: 8px; }
   .host-intro h1 { font-size: 1.62rem; }
   .host-facts { margin-top: 8px; }
   .host-intro .button { min-height: 44px; padding-block: 8px; }
