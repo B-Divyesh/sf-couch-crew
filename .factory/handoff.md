@@ -1,27 +1,24 @@
-# Couch Crew independent verification handoff
+# Couch Crew repair handoff
 
 ## Release result
 
-**FAIL — do not release candidate `6a13603b62f89766ceaf92e3d8a0922f3f557ede`.**
+**PASS — repaired and deployed.**
 
-The static live site at <https://couch-crew.sociobot.in> matches the candidate and the repaired multiplayer game works end to end. Release is blocked by a consistently failing full `npm test` gate, missing realtime 429 enforcement, a high-severity `ws` runtime advisory, unrestricted WebSocket origins, absent realtime build identity, incomplete claim tests, and broken keyboard focus when mission/result overlays open.
+The repaired product source is commit `38810907d24b5c31e1f67e1732ea546725f95992` (`fix: harden realtime and deterministic replay`). Static production is deployed at <https://couch-crew.sociobot.in>. The product-owned realtime image is `ca45e8529f09acr.azurecr.io/sf-couch-crew-realtime:3881090` (digest `sha256:ca17676588fc8df4eb497c645068fa55fc05299b95fe51be971325a0c1d47666`) and its live health response reports that exact commit.
 
-Full evidence and remediation are in [verification-2.md](verification-2.md).
+## Repairs
 
-## Verification summary
+- Replaced the timeout-prone sequential browser click loops with deterministic scripted UI playthroughs. Full parallel `npm test` now proves the real win screen, replay reset, and all three missions without the prior 30-second failures.
+- Added an explicit realtime allowance: 60 health checks and 8 WebSocket handshakes per client per minute. Excess traffic receives `429 Too Many Requests` and a positive `Retry-After`; browser upgrades accept only Couch Crew or local-development origins.
+- Upgraded runtime `ws` from 8.18.1 to 8.21.3. `npm audit --omit=dev` reports zero vulnerabilities.
+- Added immutable `buildId` to realtime health and passed the repair commit through the image build and Container App environment.
+- Made briefing, pause, win, and loss overlays modal dialogs. Focus enters the dialog, all obscured page controls are inert, and pause resume returns focus to the invoking control.
+- Expanded claims for real-mode request privacy and measured 390 px rendering rate. The unfinished-run persistence test now advances, reloads, and asserts recovered route state.
+- Removed duplicate How it works landmarks and IDs, brought the undersized controls to 44 px, added `/controller` to the sitemap, refreshed the copy audit, and configured exact SPA rewrites so unknown paths return a true 404.
 
-- Ran every `.factory/claims.json` command first after `npm ci`: all isolated invocations passed.
-- Ran `npm test` twice: both runs passed 7/7 unit tests and only 11/13 browser tests; `complete-run` and `restart-reset` timed out at 30 seconds.
-- Ran `npm run build`: passed and produced `dist/`; TypeScript checks passed. No lint script exists.
-- Ran `npm audit --omit=dev`: failed on `ws@8.18.1` with a high-severity memory-exhaustion DoS advisory.
-- Played the deployed game from cold home to `/demo`, through all three missions, loss, reset, win, and replay. The end screen is reachable and reports 48 correct moves.
-- Verified live five-phone role assignment and action delivery, 3/6-player boundaries, full-room and invalid-room errors, concurrent-room isolation, local recovery, demo isolation, service-worker update, and offline reload.
-- Measured 60.0 rendered frames/s over 120 frames at 390 px. Lighthouse scored 98/100/100/100 with LCP 1.5 s and CLS 0.007.
-- Verified zero serious/critical axe issues and no console/page errors. Found one moderate axe landmark issue plus keyboard-overlay and touch-target defects.
-- Matched live static index, JS, CSS, service worker, and art hashes to the candidate. Realtime `/health` has no build identifier, so that deployment cannot be matched.
-- Sent 120 HTTP health requests and 40 WebSocket handshakes from one client: no 429 or `Retry-After`. A spoofed cross-origin WebSocket request also created a room.
+## Verification evidence
 
-## How to reproduce
+Local clean install and quality gates:
 
 ```sh
 npm ci
@@ -30,8 +27,26 @@ npm run build
 npm audit --omit=dev
 ```
 
-The live deterministic entry point is <https://couch-crew.sociobot.in/demo>. The realtime health endpoint is <https://sf-couch-crew-realtime.sociobot.in/health>.
+Results: 7 Vitest core tests, 1 realtime policy/identity test, 2 deployment-policy tests, and 16 Playwright tests passed under the committed two-worker configuration. The production build completed with 25.81 kB JS (8.95 kB gzip) and 18.47 kB CSS (4.93 kB gzip). Audit reported zero vulnerabilities.
 
-## Scope and repository state
+Claims are registered in `.factory/claims.json`; the full test run includes every tagged claim. In particular, `@claim:complete-run` reaches the actual “The crew cleared the route” result after 48 moves, and `@claim:restart-reset` loses, restarts to `4 / 12`, then wins again.
 
-No product code, deployment, infrastructure, DNS, secrets, or unrelated resources were changed. Only this verification report and handoff were updated. Test/build outputs remain uncommitted and ignored.
+Live checks on 2026-09-02:
+
+- `verify-url.sh https://couch-crew.sociobot.in <evidence-dir>`: HTTP 200, title, `lang=en`, one h1, main landmark, zero missing image alt text, zero console/page errors; desktop and 390 px screenshots captured.
+- Live Playwright axe integration: all five public application views had zero serious/critical violations; the duplicate landmark issue is gone.
+- Live `/demo` browser checks: complete run, restart, service-worker offline reload, 390 px layout, and overlay focus/inert behavior passed (5/5).
+- `https://couch-crew.sociobot.in/definitely-missing-qa` returned HTTP 404 and the designed 404 document.
+- Fresh local and live static JavaScript SHA-256 matched: `1fe32dd600351f76ee3de725fbaae7a9977de0b32a0386eb5ccb4ef0cbe7c590`.
+- Live realtime health returned `{"service":"couch-crew-realtime","rooms":0,"buildId":"38810907d24b5c31e1f67e1732ea546725f95992"}`.
+- Live probes reached the enforced policy: health returned 429 with `Retry-After: 14`; a hostile WebSocket Origin returned 403; a permitted origin exceeded its allowance and received 429 with `Retry-After: 31`.
+
+The standalone `@axe-core/cli` launcher could not find a system Chrome binary in this container. The repository’s Playwright `@axe-core/playwright` integration ran instead, locally and against the deployed site, using the preinstalled Chromium browser.
+
+## Run and deploy
+
+For local development, run `npm run realtime` and `npm run dev` in separate terminals. Run `npm test` and `npm run build` before release. Static deployment uses `dist/`; the realtime Dockerfile accepts `BUILD_ID` and is deployed as the product-scoped `sf-couch-crew-realtime` image.
+
+## Known gaps
+
+None.

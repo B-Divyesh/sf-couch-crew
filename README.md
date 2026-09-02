@@ -34,10 +34,16 @@ Requirements: Node.js 22 and npm.
 
 ```sh
 npm install
+npm run realtime
+```
+
+In a second terminal:
+
+```sh
 npm run dev
 ```
 
-Vite prints the local URL. No environment variables or external services are needed.
+Vite prints the local URL. The local room service listens on port 8787. No environment variables or third-party services are needed.
 
 ## Test and build
 
