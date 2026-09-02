@@ -9,6 +9,8 @@
 
 The sample uses deterministic seed `20260902`. It contains five assigned players, all five roles, four completed Garage exit moves, 18% starting pressure, and a two-move streak. The first screen is already live and playable.
 
+The sample deliberately uses its built-in shared controls. It never opens a phone room, so its privacy and offline checks remain independent of the live room service.
+
 ## Isolation
 
 Demo state exists only in JavaScript memory. It does not read or write the real keys:

@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
+    "realtime": "node realtime/server.mjs",
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "vitest run tests/core.test.ts",
     "test:e2e": "playwright test"
@@ -19,5 +20,8 @@
     "typescript": "5.8.3",
     "vite": "6.4.3",
     "vitest": "3.2.7"
+  },
+  "dependencies": {
+    "ws": "8.18.1"
   }
 }

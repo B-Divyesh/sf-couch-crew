@@ -42,6 +42,13 @@
     "sandbox": "fresh home page; choose six players and inspect all role assignments"
   },
   {
+    "id": "phone-controllers",
+    "claim": "Friends join anonymous four-letter rooms and receive phone-specific role controls.",
+    "where": "host game, phone controller, README",
+    "test": "npm run test:e2e -- --grep @claim:phone-controllers",
+    "sandbox": "local host creates a room; a 390 px phone context joins and is assigned its own role controls"
+  },
+  {
     "id": "settings-persist",
     "claim": "Settings and an unfinished run persist in this browser.",
     "where": "game, privacy page, README",
@@ -75,5 +82,12 @@
     "where": "landing facts, privacy page, README",
     "test": "npm run test:e2e -- --grep @claim:free-no-account",
     "sandbox": "fresh home page; verify no credential fields, buy links, or checkout controls"
+  },
+  {
+    "id": "fixed-timestep",
+    "claim": "The game simulation uses a fixed 60 Hz timestep.",
+    "where": "README",
+    "test": "npm run test:unit -- --testNamePattern @claim:fixed-timestep",
+    "sandbox": "assert the exported deterministic simulation rate is 60 ticks per second"
   }
 ]

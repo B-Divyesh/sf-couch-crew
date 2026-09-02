@@ -1,8 +1,8 @@
 # Couch Crew
 
-Play a three-mission cooperative heist with 3–6 friends on one shared screen. Each player handles a different two-button job. A complete run needs 48 correct moves and is designed for one 18-minute couch session.
+Play a three-mission cooperative heist with 3–6 friends. Open the shared command screen, then each friend joins its four-letter room from a phone for a different two-button job. A complete run needs 48 correct moves and is designed for one 18-minute couch session.
 
-Couch Crew is for friends who want coordinated action instead of trivia or competitive microgames. It runs in a browser with touch controls or number keys. There are no accounts, ads, payments, or third-party runtime services.
+Couch Crew is for friends who want coordinated action instead of trivia or competitive microgames. It runs in a browser with phone controls, touch controls, or number keys. There are no accounts, ads, or payments.
 
 Live site: <https://couch-crew.sociobot.in>
 
@@ -10,15 +10,15 @@ One-click sample: <https://couch-crew.sociobot.in/demo>
 
 ## Play
 
-1. Choose 3–6 players.
-2. Give each player the role shown beside their controls.
-3. Start the mission and call out each next move.
-4. Press the matching role action before pressure reaches 100.
+1. Open the game on a shared screen and choose 3–6 players.
+2. Friends open `/controller` on their phones and enter the four-letter room code.
+3. Each phone receives its assigned role controls.
+4. Press the called role action before pressure reaches 100.
 5. Clear Garage exit, Skybridge, and Vault run.
 
 Touch and number-key controls both work. Keys `1` through `0` match the ten visible buttons. Press `P` to pause. Calm pressure slows the alarm for groups that want more time.
 
-The current v1 uses one shared large touch screen or keyboard. Separate phones cannot join the same room yet. A product-owned signalling service is the next step for that part of the researched brief.
+The host screen also keeps all ten controls as a touch and keyboard fallback. Phone rooms are anonymous and contain no chat or accounts. The host game uses a fixed 60 Hz simulation timestep.
 
 ## Demo sandbox
 
@@ -52,7 +52,7 @@ npm run build
 
 ## Data and privacy
 
-Real mode stores settings, aggregate run progress, and an unfinished run in local storage. Demo mode stores no game data. The game makes only same-origin requests and includes no analytics.
+Real mode stores settings, aggregate run progress, and an unfinished run in local storage. Demo mode stores no game data. Phone rooms send only room signals and button presses to Couch Crew’s own WebSocket service; the demo makes no third-party requests and includes no analytics.
 
 Read the in-product `/privacy` and `/terms` pages for visitor-facing details.
 

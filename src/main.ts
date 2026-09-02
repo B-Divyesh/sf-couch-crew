@@ -15,6 +15,10 @@ const app = document.querySelector<HTMLDivElement>('#app')!;
 const RUN_KEY = 'couch-crew:v1:run';
 const SETTINGS_KEY = 'couch-crew:v1:settings';
 const PROGRESS_KEY = 'couch-crew:v1:progress';
+const REALTIME_URL = import.meta.env.VITE_REALTIME_URL
+  ?? (location.hostname === '127.0.0.1' || location.hostname === 'localhost'
+    ? 'ws://127.0.0.1:8787'
+    : 'wss://sf-couch-crew-realtime.sociobot.in');
 
 interface Settings {
   muted: boolean;
@@ -31,6 +35,8 @@ let audioContext: AudioContext | null = null;
 let lastFrame = performance.now();
 let accumulator = 0;
 let lastSavedSecond = -1;
+let realtime: WebSocket | null = null;
+let controller: { code: string; playerId: number; roleIndexes: number[]; snapshot: GameState | null } | null = null;
 
 function loadJson<T>(key: string, fallback: T): T {
   try {
@@ -78,55 +84,21 @@ function demoNotice(): string {
 }
 
 function homePage(): string {
-  const saved = loadJson<GameState | null>(RUN_KEY, null);
-  const resume = saved && ['active', 'briefing'].includes(saved.phase)
-    ? `<button class="button secondary" type="button" data-resume>Resume room ${escapeHtml(saved.code)}</button>`
-    : '';
   return shell(`
-    <main id="main">
-      <section class="hero" aria-labelledby="home-title">
-        <picture class="hero-art">
-          <source media="(max-width: 640px)" srcset="/art/couch-crew-night-road-640.webp">
-          <img src="/art/couch-crew-night-road-1280.webp" width="1536" height="1024" fetchpriority="high" alt="A pixel-art getaway car follows five colored route signals through a night city.">
-        </picture>
-        <div class="hero-copy cut-panel">
-          <p class="eyebrow">Three missions · Five jobs · One screen</p>
-          <h1 id="home-title">Run a heist with every friend</h1>
-          <p class="lede">For 3–6 friends sharing one screen, each player gets a different two-button job.</p>
-          <div class="hero-actions">
-            <a class="button primary" href="/demo" data-link>Try it with sample data</a>
-            <span>A live mission opens with five roles filled.</span>
-          </div>
-          <ul class="plain-facts" aria-label="Game facts">
-            <li>3–6 local players</li>
-            <li>Touch and keyboard controls</li>
-            <li>Free, with no account</li>
-          </ul>
-        </div>
-        <div class="hero-scan" aria-hidden="true"></div>
+    <main id="main" class="host-main">
+      <section class="host-intro" aria-labelledby="home-title">
+        <div><p class="eyebrow">3–6 phones · 3 missions · 18 minutes</p><h1 id="home-title">Coordinate a heist from every phone</h1><ul class="host-facts" aria-label="Game facts"><li>Anonymous rooms</li><li>Free, with no account</li><li>Keyboard fallback</li></ul></div>
+        <p>Share the room code. Each phone gets one role and two controls.</p>
+        <div><a class="button secondary" href="/demo" data-link>Try the sample mission</a><form class="host-crew" data-host-crew><label for="host-size">Crew</label><select id="host-size" name="players"><option value="3">3</option><option value="4">4</option><option value="5" selected>5</option><option value="6">6</option></select><button type="submit">Set crew</button></form></div>
       </section>
-
-      <section class="play-section" aria-labelledby="play-title">
-        <div class="section-heading">
-          <p class="eyebrow">The game</p>
-          <h2 id="play-title">Start one shared crew</h2>
-          <p>Choose your crew size. The game assigns every role.</p>
-        </div>
-        <div id="play-zone" class="play-zone">
-          <form class="crew-form cut-panel" data-crew-form>
-            <label for="crew-size">How many players?</label>
-            <select id="crew-size" name="players">
-              <option value="3">3 players</option>
-              <option value="4">4 players</option>
-              <option value="5" selected>5 players</option>
-              <option value="6">6 players</option>
-            </select>
-            <button class="button primary" type="submit">Assign crew roles</button>
-            ${resume}
-            <p class="form-note">Use one large touch screen or the number keys.</p>
-          </form>
-          ${consolePreview()}
-        </div>
+      <div id="host-game" class="game-mount"></div>
+      <section id="how" class="how-section compact-how" aria-labelledby="how-title">
+        <div class="section-heading"><p class="eyebrow">How it works</p><h2 id="how-title">Join, call, clear</h2></div>
+        <ol class="steps">
+          <li><span>01</span><div><h3>Open the room on a shared screen</h3><p>Give friends the four-letter room code.</p></div></li>
+          <li><span>02</span><div><h3>Join from each phone</h3><p>Each phone receives a different role control.</p></div></li>
+          <li><span>03</span><div><h3>Press the called action</h3><p>Clear all three routes before pressure reaches 100.</p></div></li>
+        </ol>
       </section>
 
       <section id="how" class="how-section" aria-labelledby="how-title">
@@ -140,17 +112,9 @@ function homePage(): string {
 
       <section class="limits-section" aria-labelledby="limits-title">
         <div><p class="eyebrow">Privacy and limits</p><h2 id="limits-title">Your room stays on this browser</h2></div>
-        <div class="limits-copy"><p>Couch Crew stores settings and an unfinished run in local storage.</p><p>It has no accounts, chat, ads, or payment. This version uses one shared screen instead of separate phone connections.</p></div>
+        <div class="limits-copy"><p>Couch Crew stores settings and an unfinished host run in local storage.</p><p>Room codes are anonymous. It has no accounts, chat, ads, or payment.</p></div>
       </section>
     </main>`);
-}
-
-function consolePreview(): string {
-  return `<div class="console-preview cut-panel" aria-label="Preview of the shared command screen">
-    <div class="preview-top"><span>MISSION 1 / 3</span><span>PRESSURE 18%</span></div>
-    <div class="preview-call"><small>NEXT MOVE</small><strong>LOOKOUT</strong><span>SCAN FAR</span></div>
-    <div class="preview-roles" aria-hidden="true">${roles.map((role, index) => `<i class="role-${role.color}">${index + 1}</i>`).join('')}</div>
-  </div>`;
 }
 
 function demoPage(): string {
@@ -161,8 +125,20 @@ function demoPage(): string {
     </main>`, true);
 }
 
+function controllerPage(): string {
+  const code = new URLSearchParams(location.search).get('room')?.replace(/[^a-z0-9]/gi, '').slice(0, 4).toUpperCase() ?? '';
+  return shell(`<main id="main" class="controller-main">
+    <section class="controller-join cut-panel" data-controller-join>
+      <p class="eyebrow">Phone controller</p><h1 tabindex="-1">Join a Couch Crew room</h1>
+      <p>Enter the four-letter code on the shared game screen.</p>
+      <form data-join-form><label for="room-code">Room code</label><input id="room-code" name="room" value="${escapeHtml(code)}" autocomplete="off" autocapitalize="characters" maxlength="4" pattern="[A-Za-z0-9]{4}" required><button class="button primary" type="submit">Join room</button></form>
+      <p data-controller-status role="status" aria-live="polite"></p>
+    </section><div id="controller-game"></div>
+  </main>`);
+}
+
 function privacyPage(): string {
-  return shell(`<main id="main" class="text-page"><p class="eyebrow">Privacy</p><h1 tabindex="-1">See what stays in your browser</h1><p>Couch Crew does not ask for a name, email address, or account.</p><h2>Data stored here</h2><p>The game stores sound, motion, assist settings, and an unfinished run in local storage. Demo mode does not write game data.</p><h2>Network requests</h2><p>The game loads its own files from this site. It has no analytics, advertising, or third-party scripts.</p><h2>Delete your data</h2><p>Clear this site’s browser storage to remove settings and progress. A completed or lost run removes its recovery save.</p><p>Last updated: September 2, 2026.</p></main>`);
+  return shell(`<main id="main" class="text-page"><p class="eyebrow">Privacy</p><h1 tabindex="-1">See what stays in your browser</h1><p>Couch Crew does not ask for a name, email address, or account.</p><h2>Data stored here</h2><p>The host game stores sound, motion, assist settings, and an unfinished run in local storage. Demo mode does not write game data.</p><h2>Room signals</h2><p>Phone room codes and button presses travel only to Couch Crew’s own room service. It has no analytics, advertising, or third-party scripts.</p><h2>Delete your data</h2><p>Clear this site’s browser storage to remove settings and progress. A completed or lost run removes its recovery save.</p><p>Last updated: September 2, 2026.</p></main>`);
 }
 
 function termsPage(): string {
@@ -175,8 +151,9 @@ function notFoundPage(): string {
 
 function routeName(path: string): { title: string; description: string } {
   const routes: Record<string, { title: string; description: string }> = {
-    '/': { title: 'Couch Crew — cooperative heist for 3–6 friends', description: 'Play a three-mission cooperative heist. Five different two-button roles work together on one shared screen.' },
+    '/': { title: 'Couch Crew — phone-controlled heist for friends', description: 'Play a three-mission cooperative heist. Friends join one anonymous room and control different roles from their phones.' },
     '/demo': { title: 'Demo — Couch Crew', description: 'Try a live Couch Crew mission with a sample five-player crew.' },
+    '/controller': { title: 'Controller — Couch Crew', description: 'Join an anonymous Couch Crew room from your phone.' },
     '/privacy': { title: 'Privacy — Couch Crew', description: 'See what Couch Crew stores in your browser and how to remove it.' },
     '/terms': { title: 'Terms — Couch Crew', description: 'Read the terms for playing and sharing Couch Crew.' },
   };
@@ -193,6 +170,7 @@ function renderRoute(focus = false): void {
 
   if (path === '/') app.innerHTML = homePage();
   else if (path === '/demo') app.innerHTML = demoPage();
+  else if (path === '/controller') app.innerHTML = controllerPage();
   else if (path === '/privacy') app.innerHTML = privacyPage();
   else if (path === '/terms') app.innerHTML = termsPage();
   else app.innerHTML = notFoundPage();
@@ -204,6 +182,13 @@ function renderRoute(focus = false): void {
     game.calmMode = settings.calm;
     mountGame(document.querySelector<HTMLElement>('#demo-game')!);
   }
+  if (path === '/') {
+    const saved = loadJson<GameState | null>(RUN_KEY, null);
+    game = saved && ['active', 'briefing'].includes(saved.phase) ? saved : createGame(5, { active: true });
+    game.calmMode = settings.calm;
+    mountGame(document.querySelector<HTMLElement>('#host-game')!);
+    createHostRoom(game.playerCount);
+  }
   if (focus) {
     window.scrollTo({ top: 0, behavior: reducedMotion() ? 'auto' : 'smooth' });
     const heading = document.querySelector<HTMLElement>('h1');
@@ -214,22 +199,15 @@ function renderRoute(focus = false): void {
 }
 
 function bindRouteEvents(): void {
-  document.querySelector<HTMLFormElement>('[data-crew-form]')?.addEventListener('submit', (event) => {
+  document.querySelector<HTMLFormElement>('[data-host-crew]')?.addEventListener('submit', (event) => {
     event.preventDefault();
-    const data = new FormData(event.currentTarget as HTMLFormElement);
-    const count = Number(data.get('players'));
-    game = createGame(count);
+    const count = Number(new FormData(event.currentTarget as HTMLFormElement).get('players'));
+    if (!game || count === game.playerCount) return;
+    closeRealtime();
+    game = createGame(count, { active: true });
     game.calmMode = settings.calm;
-    const host = document.querySelector<HTMLElement>('#play-zone')!;
-    mountGame(host);
-    host.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' });
-  });
-  document.querySelector<HTMLElement>('[data-resume]')?.addEventListener('click', () => {
-    const saved = loadJson<GameState | null>(RUN_KEY, null);
-    if (!saved) return;
-    game = saved;
-    const host = document.querySelector<HTMLElement>('#play-zone')!;
-    mountGame(host);
+    mountGame(document.querySelector<HTMLElement>('#host-game')!);
+    createHostRoom(count);
   });
   document.querySelector<HTMLElement>('[data-demo-reset]')?.addEventListener('click', () => {
     game = createGame(5, { seed: 20260902, demo: true, active: true });
@@ -237,7 +215,17 @@ function bindRouteEvents(): void {
   });
   document.querySelector<HTMLElement>('[data-start-real]')?.addEventListener('click', () => {
     navigate('/');
-    window.setTimeout(() => document.querySelector<HTMLElement>('#crew-size')?.focus(), 0);
+    window.setTimeout(() => document.querySelector<HTMLElement>('[data-start-mission]')?.focus(), 0);
+  });
+  document.querySelector<HTMLFormElement>('[data-join-form]')?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const form = event.currentTarget as HTMLFormElement;
+    const code = String(new FormData(form).get('room') ?? '').replace(/[^a-z0-9]/gi, '').toUpperCase();
+    if (code.length !== 4) {
+      setControllerStatus('Enter the four-letter room code.');
+      return;
+    }
+    joinController(code);
   });
 }
 
@@ -247,6 +235,7 @@ function navigate(path: string): void {
 }
 
 function stopCurrentGame(): void {
+  closeRealtime();
   if (game && !game.demo) persistRun();
   game = null;
   gameHost = null;
@@ -270,7 +259,7 @@ function gameMarkup(state: GameState): string {
   const mission = missions[state.missionIndex];
   return `<section class="game-console cut-panel ${state.demo ? 'is-demo' : ''}" aria-label="Shared heist command screen">
     <div class="game-toolbar">
-      <div><span class="status-label">ROOM</span><strong class="room-code">${escapeHtml(state.code)}</strong></div>
+      <div><span class="status-label">ROOM</span><strong class="room-code" data-room-code>${escapeHtml(state.code)}</strong><small class="room-status" data-room-status>Connecting phones…</small></div>
       <div class="toolbar-actions">
         <button type="button" data-pause aria-pressed="false">Pause</button>
         <button type="button" data-mute aria-pressed="${settings.muted}">${settings.muted ? 'Sound off' : 'Sound on'}</button>
@@ -297,9 +286,122 @@ function gameMarkup(state: GameState): string {
       <label><input type="checkbox" data-shake ${settings.shake ? 'checked' : ''}> Screen nudge</label>
       <span>Keys 1–0 match the controls. Press P to pause.</span>
     </div>
+    ${state.demo ? '' : `<p class="controller-link">Phones: <a data-controller-url href="/controller">Opening room…</a></p>`}
     <div class="game-overlay" data-overlay hidden></div>
     <p class="game-message" data-game-message aria-live="polite"></p>
   </section>`;
+}
+
+function createHostRoom(playerCount: number): void {
+  if (!game || game.demo) return;
+  setRoomStatus('Connecting phones…');
+  try {
+    realtime = new WebSocket(REALTIME_URL);
+  } catch {
+    setRoomStatus('Phone link unavailable. Keyboard controls still work.');
+    return;
+  }
+  realtime.addEventListener('open', () => sendSignal({ type: 'create', playerCount }));
+  realtime.addEventListener('message', (event) => {
+    const message = parseSignal(event.data);
+    if (!message || !game) return;
+    if (message.type === 'room-created') {
+      const code = String(message.code);
+      game.code = code;
+      setText('[data-room-code]', code);
+      setText('[data-controller-url]', `${location.host}/controller?room=${code}`);
+      gameHost?.querySelector<HTMLAnchorElement>('[data-controller-url]')?.setAttribute('href', `/controller?room=${code}`);
+      publishSnapshot();
+    } else if (message.type === 'room-state') {
+      const connected = (message.connectedPlayers as number[]).length;
+      setRoomStatus(`${connected} of ${message.playerCount} phones joined · couch-crew.sociobot.in/controller`);
+    } else if (message.type === 'controller-action') {
+      act(Number(message.roleIndex), Number(message.actionIndex));
+    } else if (message.type === 'error') {
+      setRoomStatus(String(message.message));
+    }
+  });
+  realtime.addEventListener('close', () => {
+    if (game && !game.demo) setRoomStatus('Phone link ended. Keyboard controls still work.');
+  });
+}
+
+function joinController(code: string): void {
+  closeRealtime();
+  setControllerStatus('Joining room…');
+  try { realtime = new WebSocket(REALTIME_URL); } catch { setControllerStatus('The phone link is unavailable. Try again.'); return; }
+  realtime.addEventListener('open', () => sendSignal({ type: 'join', code }));
+  realtime.addEventListener('message', (event) => {
+    const message = parseSignal(event.data);
+    if (!message) return;
+    if (message.type === 'joined') {
+      const roomCode = String(message.code);
+      controller = { code: roomCode, playerId: Number(message.playerId), roleIndexes: message.roleIndexes as number[], snapshot: null };
+      setControllerStatus(`Joined room ${roomCode}. Your controls are ready.`);
+      renderController();
+    } else if (message.type === 'snapshot' && controller) {
+      controller.snapshot = message.snapshot as GameState;
+      renderController();
+    } else if (message.type === 'room-closed') {
+      setControllerStatus(String(message.reason));
+      controller = null;
+      document.querySelector<HTMLElement>('#controller-game')!.innerHTML = '';
+    } else if (message.type === 'error') setControllerStatus(String(message.message));
+  });
+  realtime.addEventListener('close', () => {
+    if (controller) setControllerStatus('The phone link closed. Join the room again.');
+  });
+}
+
+function renderController(): void {
+  const target = document.querySelector<HTMLElement>('#controller-game');
+  if (!target || !controller) return;
+  const snapshot = controller.snapshot;
+  const call = snapshot ? roles[snapshot.prompt.roleIndex] : null;
+  target.innerHTML = `<section class="phone-console cut-panel" aria-label="Phone controller">
+    <p class="eyebrow">Room ${escapeHtml(controller.code)} · player ${controller.playerId}</p>
+    <h2>Your phone controls</h2>
+    <p class="phone-call" aria-live="polite">${call ? `Next: ${call.name} — ${call.actions[snapshot!.prompt.actionIndex]}` : 'Waiting for the host game.'}</p>
+    <div class="phone-roles">${controller.roleIndexes.map((roleIndex) => {
+      const role = roles[roleIndex];
+      const active = snapshot?.phase === 'active' && snapshot.prompt.roleIndex === roleIndex;
+      return `<section class="phone-role role-${role.color} ${active ? 'is-called' : ''}"><h3>${role.name}</h3><div>${role.actions.map((action, actionIndex) => `<button type="button" data-phone-action="${roleIndex}:${actionIndex}" ${snapshot?.phase !== 'active' ? 'disabled' : ''}>${action}</button>`).join('')}</div></section>`;
+    }).join('')}</div>
+  </section>`;
+  target.querySelectorAll<HTMLButtonElement>('[data-phone-action]').forEach((button) => button.addEventListener('click', () => {
+    const [roleIndex, actionIndex] = button.dataset.phoneAction!.split(':').map(Number);
+    sendSignal({ type: 'action', roleIndex, actionIndex });
+  }));
+}
+
+function parseSignal(raw: unknown): Record<string, unknown> | null {
+  try { return JSON.parse(String(raw)) as Record<string, unknown>; } catch { return null; }
+}
+
+function sendSignal(message: Record<string, unknown>): void {
+  if (realtime?.readyState === WebSocket.OPEN) realtime.send(JSON.stringify(message));
+}
+
+function publishSnapshot(): void {
+  if (game && !game.demo) sendSignal({ type: 'snapshot', snapshot: game });
+}
+
+function closeRealtime(): void {
+  if (realtime) {
+    realtime.onclose = null;
+    realtime.close();
+  }
+  realtime = null;
+  controller = null;
+}
+
+function setRoomStatus(text: string): void {
+  const target = gameHost?.querySelector<HTMLElement>('[data-room-status]');
+  if (target) target.textContent = text;
+}
+
+function setControllerStatus(text: string): void {
+  document.querySelector<HTMLElement>('[data-controller-status]')!.textContent = text;
 }
 
 function overlayMarkup(state: GameState): string {
@@ -327,10 +429,12 @@ function handleGameClick(event: Event): void {
     playTone(320);
     updateGameDom(true);
     persistRun();
+    publishSnapshot();
   } else if (target.matches('[data-pause]')) {
     game.paused = !game.paused;
     updateGameDom(true);
     persistRun();
+    publishSnapshot();
   } else if (target.matches('[data-mute]')) {
     settings.muted = !settings.muted;
     saveSettings();
@@ -359,6 +463,7 @@ function act(roleIndex: number, actionIndex: number, button?: HTMLElement): void
   }
   updateGameDom(true);
   persistRun();
+  publishSnapshot();
 }
 
 function updateGameDom(force = false): void {
@@ -490,6 +595,7 @@ window.addEventListener('keydown', (event) => {
     event.preventDefault();
     game.paused = !game.paused;
     updateGameDom(true);
+    publishSnapshot();
   }
 });
 
@@ -504,8 +610,11 @@ function frame(now: number): void {
   if (!document.hidden && game?.phase === 'active' && !game.paused) {
     accumulator += delta;
     while (accumulator >= STEP) {
+      const previousPrompt = game.prompt.serial;
+      const previousPhase: GameState['phase'] = game.phase;
       tickGame(game, STEP);
       accumulator -= STEP;
+      if (game.prompt.serial !== previousPrompt || game.phase !== previousPhase) publishSnapshot();
     }
     updateGameDom();
     const second = Math.floor(game.elapsed);

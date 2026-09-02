@@ -2,7 +2,7 @@
 
 ## Direction
 
-**Night-drive demoscene.** Couch Crew is one shared heist console, not a grid of party-game cards. The screen resembles a home computer scene demo imagined by a getaway crew: chunky pixels, scanline texture, a hard-edged city silhouette, status bands, and a road that pulls every role toward the same goal. The asymmetrical layout keeps the playable console visible in the first captured screen. It avoids a generic centered hero and gives a room of players one obvious shared focal point.
+**Night-drive demoscene.** Couch Crew is one shared heist console with a phone controller for every friend, not a grid of party-game cards. The screen resembles a home computer scene demo imagined by a getaway crew: chunky pixels, scanline texture, a hard-edged city silhouette, status bands, and a road that pulls every role toward the same goal. The asymmetrical layout keeps the playable console visible in the first captured screen. It avoids a generic centered hero and gives a room of players one obvious shared focal point.
 
 The product is intentionally single-mode and dark. A light treatment would break the night-drive world and increase glare on the shared TV. Bright UI colors have tested roles and retain contrast on the dark surfaces.
 
@@ -34,7 +34,7 @@ Spacing follows an 8 px base: 4, 8, 16, 24, 32, 48, 64. Body text is at least 16
 
 Panels use clipped 45-degree corners rather than rounded SaaS cards. Borders are one pixel with a two-pixel shadow offset, like a low-resolution framebuffer. The primary button is lime with dark text. Secondary buttons are raised navy plates. Presses translate by two pixels and lose their shadow.
 
-The game has one shared command deck and five different role strips. Each role receives two large labeled actions. Keyboard keys `1`–`0` cover all role actions; touch uses the same controls. A sixth player becomes the wildcard and can trigger either dispatcher action. Assist mode slows pressure growth and remains on refresh.
+The game has one shared command deck and five different role strips. The host creates an anonymous four-letter room through the product-owned WebSocket service. Each joining phone receives only its assigned role controls; a sixth player shares the dispatcher role. Keyboard keys `1`–`0` and the host touch deck remain a fallback. Assist mode slows pressure growth and remains on refresh.
 
 ## Game scene and asset plan
 

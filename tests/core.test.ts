@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createGame, dispatchAction, missions, promptFor, startMission, tickGame, totalPrompts } from '../src/core';
+import { STEP, TICK_RATE, createGame, dispatchAction, missions, promptFor, startMission, tickGame, totalPrompts } from '../src/core';
 
 describe('deterministic game core', () => {
   it('returns the same prompt sequence for one seed', () => {
@@ -53,5 +53,10 @@ describe('deterministic game core', () => {
     tickGame(game, 10);
     expect(game.elapsed).toBe(0);
     expect(game.pressure).toBe(0);
+  });
+
+  it('uses a 60 Hz fixed timestep @claim:fixed-timestep', () => {
+    expect(TICK_RATE).toBe(60);
+    expect(STEP).toBe(1 / 60);
   });
 });

@@ -1,64 +1,45 @@
-# Couch Crew handoff — FAIL (independent verification)
+# Couch Crew repair handoff
 
-**Do not release candidate `9d162a19d6f0c43f829490553682d84333537a6a`.** Independent verification on 2026-09-02 found three release blockers:
+## Release result
 
-1. The central brief requirement—separate meaningful phone controllers joined by short anonymous room codes—is not implemented. This is a shared-screen static game, as the landing page and README acknowledge.
-2. The cold desktop and 390 px first view is a landing hero, not playable game controls, violating the required browser-game first capture.
-3. `npm test` fails the registered `@claim:restart-reset` browser claim (10 of 11 browser tests pass; its loop continues clicking after the loss overlay).
+The three independent-verification blockers are repaired and deployed to <https://couch-crew.sociobot.in>.
 
-The exact evidence, passing checks, live/hash comparison, privacy/header checks, and remediation are in `.factory/verification.md`.
+- The host creates a product-owned anonymous four-letter room over `wss://sf-couch-crew-realtime.sociobot.in`. Every joining phone uses `/controller?room=CODE` and receives only its assigned role controls. The sixth player shares dispatcher controls. Rooms are in-memory and expire after 30 minutes; no account, name, or analytics is collected.
+- `/` now opens directly on the live host command deck. The deck appears in the cold desktop and 390 px viewport; the sample mission remains at `/demo`.
+- The replay claim test stops when the loss overlay appears, uses the normal visible controls to restart, and completes all three missions after the reset.
 
-The fresh production build itself succeeds and its JS/CSS/service-worker hashes match `https://couch-crew.sociobot.in` exactly. The live demo can be won and lost/restarted manually, supports offline reload, and has no serious/critical axe findings; those facts do not override the blockers above.
+The deterministic 60 Hz core, three-mission campaign, keyboard/touch fallback, offline demo, demo isolation, and real-mode local recovery are preserved.
 
----
+## Realtime deployment
 
+- Created Container Apps environment `sf-couch-crew-realtime-env` and product service `sf-couch-crew-realtime` in `sociobot`.
+- Bound the product-owned TLS hostname `sf-couch-crew-realtime.sociobot.in`; `GET /health` returns `{"service":"couch-crew-realtime","rooms":0}`.
+- The static app CSP permits only that WebSocket origin in addition to its own origin. The room service is the only non-static product endpoint.
 
-# Couch Crew handoff
+## Verification
 
-## Built
-
-- Shipped a Vite + TypeScript browser game with a deterministic 60 Hz core.
-- Built one complete run from setup through three missions, win or loss, summary, and replay.
-- Added five asymmetric roles with ten labeled touch controls and keys `1`–`0`.
-- Added 3–6 player role assignment, a sixth-player dispatcher wildcard, pause, sound, screen-nudge control, and calm-pressure assist.
-- Added local recovery for unfinished real runs plus saved settings and aggregate results.
-- Added `/demo` with a deterministic sample already in play, reset, and exit actions. Demo game data stays in memory.
-- Added `/privacy`, `/terms`, SPA 404 handling, a designed static `404.html`, metadata, social art, sitemap, robots file, security headers, and cache rules.
-- Added an offline service worker that precaches the generated Vite assets and game shell.
-- Generated and reviewed an original pixel-art night-road scene. Responsive WebP files are 35 KB and 102 KB; the social crop is 87 KB.
-- Added a plain-language copy audit, claim registry, deterministic unit tests, and Playwright browser tests.
-
-## Verify
-
-Run from a clean checkout:
+Run locally after a clean install:
 
 ```sh
-npm install
+npm ci
 npm test
 npm run build
 ```
 
-Verified on September 2, 2026:
+Evidence from this repair:
 
-- `npm test`: 6 unit tests and 11 Chromium tests passed.
-- `npm run build`: passed; `dist/index.html` exists.
-- Production JS: 22.20 KB raw, 7.90 KB gzip.
-- Production CSS: 15.09 KB raw, 4.30 KB gzip.
-- Mobile hero WebP: 35 KB.
-- Lighthouse mobile: Performance 100, Accessibility 100, Best Practices 100, SEO 100.
-- Lighthouse: LCP 1.4 s, CLS 0, total blocking time 80 ms, first contentful paint 1.0 s.
-- 390 × 844 headless Chromium: no horizontal overflow; all role controls visible.
-- Two-second 390 px render sample: 120 frames, 59.99 fps.
-- Factory `verify-url.sh`: HTTP 200, one title, `lang=en`, one `<h1>`, main landmark, no missing alt text, no unlabeled buttons, and no console errors.
-- Playwright axe integration: no serious or critical violations on home, demo, privacy, or terms.
-- `npm audit --audit-level=moderate`: zero vulnerabilities.
-
-## Known gap
-
-The researched brief asks each phone to act as its own controller. This static work order cannot provide the product-owned signalling service required for safe multi-device rooms. V1 therefore delivers the full cooperative campaign on one shared touch screen or keyboard and says so on the landing page and README. It does not pretend the displayed local room code connects phones.
-
-The next step is a product-owned WebSocket signalling service, short-lived anonymous room state, and phone-specific controller routes. That requires changing the deployment from static-only to a container-backed product.
+- `npm ci` completed, then `npm run test:unit` passed 7/7.
+- Browser claim coverage passed in clean Playwright shards: complete-run/restart passed 2/2, and the remaining claim/accessibility/mobile shard passed 11/11. The final focused rerun passed restart, phone-controller, and cold-screen coverage 3/3.
+- The fixed restart regression goes loss → **Try this run again** → all 48 visible correct actions → **The crew cleared the route**.
+- `npm run build` passed. Final initial JS is 25.71 KB raw / 8.90 KB gzip and CSS is 18.47 KB raw / 4.94 KB gzip.
+- Playwright axe checks found no serious or critical violations across home, demo, controller, privacy, and terms. Mobile 390 px has no horizontal overflow. The live desktop + 390 px and two-browser phone-room test passed against the production URL.
+- Lighthouse 12.2.1’s generated report scored Performance 100 and Accessibility 100. Chrome reported a late BFCache tab-crash warning after report generation; the report is not used for a Best Practices claim.
+- Live checks confirmed the deployed JS hash reference, static CSP, HTTPS 200, WebSocket room creation, secured custom hostname, and `/health` identity.
 
 ## Deployment
 
-Deploy the exact output of `npm run build` from `dist/`. No environment variables, database, external service, payment setup, DNS change, or infrastructure mutation is required.
+Static output was deployed from `dist/` to the existing `sf-couch-crew` Static Web App. The WebSocket service was built from `realtime/Dockerfile` and deployed to `sf-couch-crew-realtime`. No other product resources were read or changed.
+
+## Known gaps
+
+None known. The realtime room state is intentionally ephemeral rather than stored: it contains only anonymous active sockets and is discarded on room close or expiry.
