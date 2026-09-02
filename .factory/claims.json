@@ -3,15 +3,15 @@
     "id": "complete-run",
     "claim": "A run reaches a win screen after three missions and 48 correct moves.",
     "where": "game, README",
-    "test": "npm run test:e2e -- --grep @claim:complete-run",
+    "test": "npm run test:browser -- --grep @claim:complete-run",
     "sandbox": "fresh browser context at /demo; play every called move and assert the win summary"
   },
   {
     "id": "session-length",
-    "claim": "A complete run is designed for an 18-minute couch session.",
-    "where": "README",
+    "claim": "A paced real run lasts at least 14 minutes, and a representative couch session takes about 18 minutes.",
+    "where": "first screen, README",
     "test": "npm run test:unit -- --testNamePattern @claim:session-length",
-    "sandbox": "deterministic mission data; assert all 48 prompt windows total between 17 and 18 minutes"
+    "sandbox": "deterministic real game; complete all 48 moves at the enforced 17.5-second cadence, then complete a representative run at 19 seconds per move with briefing time"
   },
   {
     "id": "assist-mode",
@@ -24,70 +24,70 @@
     "id": "restart-reset",
     "claim": "Replay starts a fresh run.",
     "where": "end screen",
-    "test": "npm run test:e2e -- --grep @claim:restart-reset",
+    "test": "npm run test:browser -- --grep @claim:restart-reset",
     "sandbox": "sample run; lose, replay, and assert the seeded sample starting state"
   },
   {
     "id": "touch-keyboard",
     "claim": "Touch and number-key controls both advance the route.",
     "where": "landing facts, game help, README",
-    "test": "npm run test:e2e -- --grep @claim:touch-keyboard",
+    "test": "npm run test:browser -- --grep @claim:touch-keyboard",
     "sandbox": "fresh /demo; make one correct pointer press and one correct keyboard press"
   },
   {
     "id": "crew-size",
     "claim": "The game assigns five roles for crews of 3–6 players.",
     "where": "landing, setup, README",
-    "test": "npm run test:e2e -- --grep @claim:crew-size",
-    "sandbox": "fresh home page; choose six players and inspect all role assignments"
+    "test": "npm run test:browser -- --grep @claim:crew-size",
+    "sandbox": "fresh home page; choose 3, 4, 5, and 6 players and assert all five role assignments for each crew size"
   },
   {
     "id": "phone-controllers",
     "claim": "Friends join anonymous four-letter rooms and receive phone-specific role controls.",
     "where": "host game, phone controller, README",
-    "test": "npm run test:e2e -- --grep @claim:phone-controllers",
+    "test": "npm run test:browser -- --grep @claim:phone-controllers",
     "sandbox": "local host creates a room; a 390 px phone context joins and is assigned its own role controls"
   },
   {
     "id": "settings-persist",
     "claim": "Settings and an unfinished run persist in this browser.",
     "where": "game, privacy page, README",
-    "test": "npm run test:e2e -- --grep @claim:settings-persist",
+    "test": "npm run test:browser -- --grep @claim:settings-persist",
     "sandbox": "fresh real-mode local storage; enable calm pressure, advance one move, reload, and assert both the setting and unfinished route recover"
   },
   {
     "id": "demo-isolated",
     "claim": "Demo mode saves no game data.",
     "where": "demo banner, privacy page, README",
-    "test": "npm run test:e2e -- --grep @claim:demo-isolated",
+    "test": "npm run test:browser -- --grep @claim:demo-isolated",
     "sandbox": "fresh browser storage at /demo; play a move and assert no Couch Crew localStorage keys"
   },
   {
     "id": "local-privacy",
     "claim": "The demo makes no third-party network requests.",
     "where": "privacy page, README",
-    "test": "npm run test:e2e -- --grep @claim:local-privacy",
+    "test": "npm run test:browser -- --grep @claim:local-privacy",
     "sandbox": "fresh browser context; record every request during the demo and require same-origin URLs"
   },
   {
     "id": "real-local-privacy",
     "claim": "Real play loads no analytics, advertising, or third-party scripts.",
     "where": "privacy page, README",
-    "test": "npm run test:e2e -- --grep @claim:real-local-privacy",
+    "test": "npm run test:browser -- --grep @claim:real-local-privacy",
     "sandbox": "fresh real-mode browser context; record document requests and WebSocket endpoints, allowing only the same-origin game and Couch Crew room service"
   },
   {
     "id": "offline-reload",
     "claim": "The game reloads offline after the first visit.",
     "where": "offline state, README",
-    "test": "npm run test:e2e -- --grep @claim:offline-reload",
+    "test": "npm run test:browser -- --grep @claim:offline-reload",
     "sandbox": "new service-worker context; visit /demo, go offline, reload, and inspect the live game"
   },
   {
     "id": "free-no-account",
     "claim": "Couch Crew is free and has no account step.",
     "where": "landing facts, privacy page, README",
-    "test": "npm run test:e2e -- --grep @claim:free-no-account",
+    "test": "npm run test:browser -- --grep @claim:free-no-account",
     "sandbox": "fresh home page; verify no credential fields, buy links, or checkout controls"
   },
   {
@@ -101,7 +101,35 @@
     "id": "rendered-frame-rate",
     "claim": "The live game renders at 60 frames per second on a 390 px screen.",
     "where": "README",
-    "test": "npm run test:e2e -- --grep @claim:rendered-frame-rate",
-    "sandbox": "fresh 390 px demo; sample 120 requestAnimationFrame frames while the real game loop is active and assert 60 fps within a 50–65 fps tolerance"
+    "test": "npm run test:performance -- --grep @claim:rendered-frame-rate",
+    "sandbox": "isolated one-worker 390 px demo; warm the live loop, measure five 60-frame requestAnimationFrame samples, and assert the median stays within the real 50–65 fps floor"
+  },
+  {
+    "id": "origin-policy",
+    "claim": "The room service accepts browser sockets only from Couch Crew and local development origins.",
+    "where": "README",
+    "test": "npm run test:realtime",
+    "sandbox": "ephemeral local room server; assert production and localhost origins connect while hostile and deceptive origins receive 403"
+  },
+  {
+    "id": "rate-limits",
+    "claim": "Each client gets 8 room openings and 60 health checks per minute; the next request receives 429 with Retry-After.",
+    "where": "README",
+    "test": "npm run test:realtime",
+    "sandbox": "ephemeral local room server with production limits; assert openings 1–8 and health checks 1–60 pass, then assert each next request returns 429 and Retry-After 60"
+  },
+  {
+    "id": "recovery-deletion",
+    "claim": "A completed or lost run removes its recovery save.",
+    "where": "privacy page",
+    "test": "npm run test:browser -- --grep @claim:recovery-deletion",
+    "sandbox": "fresh real-mode browser storage; reach both win and loss states and assert the unfinished-run key is deleted after each"
+  },
+  {
+    "id": "no-chat",
+    "claim": "Couch Crew has no chat.",
+    "where": "landing, README",
+    "test": "npm run test:browser -- --grep @claim:no-chat",
+    "sandbox": "fresh home page; assert the no-chat notice is visible and no chat input or send control exists"
   }
 ]

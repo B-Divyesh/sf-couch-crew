@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "lint": "eslint src tests realtime playwright.config.ts playwright.performance.config.ts",
+    "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "realtime": "node realtime/server.mjs",
@@ -12,14 +14,19 @@
     "test:unit": "vitest run tests/core.test.ts",
     "test:realtime": "node --test tests/realtime.test.mjs",
     "test:policy": "node --test tests/deployment.test.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "npm run test:browser && npm run test:performance",
+    "test:browser": "playwright test",
+    "test:performance": "playwright test --config playwright.performance.config.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.10.2",
+    "@eslint/js": "10.0.1",
     "@playwright/test": "1.58.2",
     "@types/node": "22.15.3",
+    "eslint": "10.9.1",
     "sharp-cli": "6.1.0",
     "typescript": "5.8.3",
+    "typescript-eslint": "8.69.0",
     "vite": "6.4.3",
     "vitest": "3.2.7"
   },

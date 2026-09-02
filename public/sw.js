@@ -1,4 +1,4 @@
-const CACHE = 'couch-crew-v1';
+const CACHE = 'couch-crew-v2';
 const SHELL = [
   '/',
   '/index.html',

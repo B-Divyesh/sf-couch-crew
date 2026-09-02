@@ -1,5 +1,6 @@
 import './style.css';
 import {
+  MIN_PROMPT_CADENCE_SECONDS,
   STEP,
   assignmentFor,
   createGame,
@@ -26,7 +27,7 @@ interface Settings {
   calm: boolean;
 }
 
-let settings: Settings = loadJson(SETTINGS_KEY, { muted: false, shake: true, calm: false });
+const settings: Settings = loadJson(SETTINGS_KEY, { muted: false, shake: true, calm: false });
 let game: GameState | null = null;
 let gameHost: HTMLElement | null = null;
 let lastPromptSerial = -1;
@@ -72,7 +73,7 @@ function shell(content: string, demoBanner = false): string {
     </header>
     ${content}
     <footer class="site-footer">
-      <p>Couch Crew is a cooperative heist for 3–6 friends.</p>
+      <p>Couch Crew is a cooperative heist for 3–6 friends and family members.</p>
       <div class="footer-links"><a href="/privacy" data-link>Privacy</a><a href="/terms" data-link>Terms</a><a href="https://hello-factory.sociobot.in" rel="external">Built by Param Factory <span class="sr-only">(external site)</span></a></div>
       <p class="footer-note">Version 1.0.0 · Scene generated for this game.</p>
     </footer>
@@ -88,16 +89,16 @@ function homePage(): string {
   return shell(`
     <main id="main" class="host-main">
       <section class="host-intro" aria-labelledby="home-title">
-        <div><p class="eyebrow">3–6 phones · 3 missions · 18 minutes</p><h1 id="home-title">Coordinate a heist from every phone</h1><ul class="host-facts" aria-label="Game facts"><li>Anonymous rooms</li><li>Free, with no account</li><li>Keyboard fallback</li></ul></div>
-        <p>Share the room code. Each phone gets one role and two controls.</p>
-        <div><a class="button secondary" href="/demo" data-link>Try the sample mission</a><form class="host-crew" data-host-crew><label for="host-size">Crew</label><select id="host-size" name="players"><option value="3">3</option><option value="4">4</option><option value="5" selected>5</option><option value="6">6</option></select><button type="submit">Set crew</button></form></div>
+        <div><p class="eyebrow">3–6 players · 3 missions · about 18 minutes</p><h1 id="home-title" tabindex="-1">Coordinate a heist from every phone</h1><ul class="host-facts" aria-label="Game facts"><li>Anonymous rooms</li><li>Free, with no account</li><li>Keyboard fallback</li></ul></div>
+        <p>For 3–6 friends or family members in one room. Share one room code.</p>
+        <div><a class="button secondary" href="/demo" data-link>Try it with sample data</a><form class="host-crew" data-host-crew><label for="host-size">Crew</label><select id="host-size" name="players"><option value="3">3</option><option value="4">4</option><option value="5" selected>5</option><option value="6">6</option></select><button type="submit">Set crew</button></form></div>
       </section>
       <div id="host-game" class="game-mount"></div>
       <section id="how" class="how-section" aria-labelledby="how-title">
         <div class="section-heading"><p class="eyebrow">How it works</p><h2 id="how-title">Coordinate three missions</h2></div>
         <ol class="steps">
           <li><span>01</span><div><h3>Assign the five jobs</h3><p>Smaller crews take two jobs. A sixth player becomes the dispatcher’s wildcard.</p></div></li>
-          <li><span>02</span><div><h3>Call the next move</h3><p>The screen names one job and action. That player presses their matching control.</p></div></li>
+          <li><span>02</span><div><h3>Lock the next move</h3><p>The screen names one job and action. That player locks the matching control for the next 18-second beat.</p></div></li>
           <li><span>03</span><div><h3>Keep pressure below 100</h3><p>Correct moves clear the route. Wrong or late moves raise the alarm.</p></div></li>
         </ol>
       </section>
@@ -359,7 +360,7 @@ function renderController(): void {
     <div class="phone-roles">${controller.roleIndexes.map((roleIndex) => {
       const role = roles[roleIndex];
       const active = snapshot?.phase === 'active' && snapshot.prompt.roleIndex === roleIndex;
-      return `<section class="phone-role role-${role.color} ${active ? 'is-called' : ''}"><h3>${role.name}</h3><div>${role.actions.map((action, actionIndex) => `<button type="button" data-phone-action="${roleIndex}:${actionIndex}" ${snapshot?.phase !== 'active' ? 'disabled' : ''}>${action}</button>`).join('')}</div></section>`;
+      return `<section class="phone-role role-${role.color} ${active ? 'is-called' : ''}"><h3>${role.name}</h3><div>${role.actions.map((action, actionIndex) => `<button type="button" data-phone-action="${roleIndex}:${actionIndex}" ${snapshot?.phase !== 'active' || snapshot.answerLocked ? 'disabled' : ''}>${action}</button>`).join('')}</div></section>`;
     }).join('')}</div>
   </section>`;
   target.querySelectorAll<HTMLButtonElement>('[data-phone-action]').forEach((button) => button.addEventListener('click', () => {
@@ -443,7 +444,7 @@ function handleGameClick(event: Event): void {
 }
 
 function act(roleIndex: number, actionIndex: number, button?: HTMLElement): void {
-  if (!game || game.phase !== 'active' || game.paused) return;
+  if (!game || game.phase !== 'active' || game.paused || game.answerLocked) return;
   const correct = game.prompt.roleIndex === roleIndex && game.prompt.actionIndex === actionIndex;
   dispatchAction(game, roleIndex, actionIndex);
   playTone(correct ? 620 : 150);
@@ -455,6 +456,10 @@ function act(roleIndex: number, actionIndex: number, button?: HTMLElement): void
     consoleElement?.classList.add('nudge');
     window.setTimeout(() => consoleElement?.classList.remove('nudge'), 140);
   }
+  const message = correct && game.answerLocked
+    ? `Move locked. The next call arrives in ${Math.ceil(Math.max(0, MIN_PROMPT_CADENCE_SECONDS - game.promptElapsed))} seconds.`
+    : correct ? 'Move cleared.' : 'Wrong control. Pressure increased.';
+  setText('[data-game-message]', message);
   updateGameDom(true);
   persistRun();
   publishSnapshot();
@@ -464,13 +469,20 @@ function updateGameDom(force = false): void {
   if (!game || !gameHost) return;
   const mission = missions[game.missionIndex];
   const promptRole = roles[game.prompt.roleIndex];
+  const promptElapsed = Number.isFinite(game.promptElapsed) ? game.promptElapsed : 0;
+  const answerLocked = game.answerLocked === true;
   setText('[data-mission-number]', String(game.missionIndex + 1));
   setText('[data-mission-name]', mission.name);
   setText('[data-route-text]', `${game.missionProgress} / ${mission.target}`);
   setText('[data-pressure-text]', `${Math.round(game.pressure)}%`);
   setValue('[data-route]', game.missionProgress, mission.target);
   setValue('[data-pressure]', game.pressure, 100);
-  setText('[data-call-time]', game.phase === 'active' ? `${Math.max(0, Math.ceil(game.promptTime))} seconds` : 'Waiting');
+  setText('[data-call-time]', game.phase === 'active'
+    ? answerLocked
+      ? `Move locked · next call in ${Math.ceil(Math.max(0, MIN_PROMPT_CADENCE_SECONDS - promptElapsed))} seconds`
+      : `${Math.max(0, Math.ceil(game.promptTime))} seconds to lock`
+    : 'Waiting');
+  gameHost.querySelectorAll<HTMLButtonElement>('[data-game-action]').forEach((button) => { button.disabled = answerLocked; });
 
   if (force || lastPromptSerial !== game.prompt.serial) {
     setText('[data-call-role]', promptRole.name);

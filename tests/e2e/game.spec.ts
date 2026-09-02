@@ -64,20 +64,28 @@ test('touch and keyboard both advance the route @claim:touch-keyboard', async ({
 
 test('crew setup covers three through six players @claim:crew-size', async ({ page }) => {
   await page.goto('/');
-  await page.getByLabel('Crew', { exact: true }).selectOption('6');
-  await page.getByRole('button', { name: 'Set crew' }).click();
-  await expect(page.locator('.role-strip')).toHaveCount(5);
-  await expect(page.getByText('Players 5 + 6')).toBeVisible();
+  const expectedAssignments = {
+    3: ['Player 1', 'Player 2', 'Player 2', 'Player 1', 'Player 3'],
+    4: ['Player 1', 'Player 2', 'Player 3', 'Player 4', 'Player 4'],
+    5: ['Player 1', 'Player 2', 'Player 3', 'Player 4', 'Player 5'],
+    6: ['Player 1', 'Player 2', 'Player 3', 'Player 4', 'Players 5 + 6'],
+  } as const;
+  for (const crewSize of [3, 4, 5, 6] as const) {
+    await page.getByLabel('Crew', { exact: true }).selectOption(String(crewSize));
+    await page.getByRole('button', { name: 'Set crew' }).click();
+    await expect(page.locator('.role-strip')).toHaveCount(5);
+    await expect(page.locator('.role-name small')).toHaveText(expectedAssignments[crewSize]);
+  }
 });
 
 test('settings and unfinished runs persist @claim:settings-persist', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Calm pressure').check();
   await pressCorrect(page);
-  await expect(page.locator('[data-route-text]')).toHaveText('1 / 12');
+  await expect(page.locator('[data-call-time]')).toContainText('Move locked');
   await page.reload();
   await expect(page.getByLabel('Calm pressure')).toBeChecked();
-  await expect(page.locator('[data-route-text]')).toHaveText('1 / 12');
+  await expect(page.locator('[data-call-time]')).toContainText('Move locked');
 });
 
 test('a phone joins an anonymous room and receives only its role controls @claim:phone-controllers', async ({ browser, baseURL }) => {
@@ -86,8 +94,9 @@ test('a phone joins an anonymous room and receives only its role controls @claim
   const host = await hostContext.newPage();
   const phone = await phoneContext.newPage();
   await host.goto(baseURL!);
-  await expect(host.locator('[data-controller-url]')).toContainText('/controller?room=');
-  const code = (await host.locator('[data-room-code]').textContent())!.trim();
+  await expect(host.locator('[data-controller-url]')).toHaveAttribute('href', /\/controller\?room=/);
+  const controllerHref = await host.locator('[data-controller-url]').getAttribute('href');
+  const code = new URL(controllerHref!, baseURL).searchParams.get('room')!;
   expect(code).toMatch(/^[BCDFGHJKLMNPQRSTVWXYZ23456789]{4}$/);
   await phone.goto(`${baseURL}/controller?room=${code}`);
   await phone.getByRole('button', { name: 'Join room' }).click();
@@ -138,6 +147,12 @@ test('demo reloads offline after the first visit @claim:offline-reload', async (
   const page = await context.newPage();
   await page.goto(`${baseURL}/demo`);
   await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
+  const updateState = await page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.ready;
+    await registration.update();
+    return { controlled: navigator.serviceWorker.controller !== null, waiting: registration.waiting !== null };
+  });
+  expect(updateState).toEqual({ controlled: true, waiting: false });
   await context.setOffline(true);
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Finish a sample heist together' })).toBeVisible();
@@ -158,16 +173,73 @@ test('home and demo pass automated accessibility checks', async ({ page }) => {
 
 test('mobile layout stays inside a 390 pixel viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/demo');
-  const width = await page.evaluate(() => document.documentElement.scrollWidth);
-  expect(width).toBeLessThanOrEqual(390);
-  await expect(page.getByRole('button', { name: 'Scan near' })).toBeVisible();
-  for (const selector of ['.host-crew select', '.host-crew button', '.demo-banner button']) {
-    await page.goto(selector.includes('host') ? '/' : '/demo');
-    for (const box of await page.locator(selector).evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().toJSON()))) {
-      expect(box.height).toBeGreaterThanOrEqual(44);
+  for (const path of ['/', '/demo', '/controller', '/privacy', '/terms']) {
+    await page.goto(path);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth), `${path} viewport width`).toBeLessThanOrEqual(390);
+    const targets = await page.locator('a, button, select, input:not([type="checkbox"]), label:has(input[type="checkbox"])').evaluateAll((elements) => elements
+      .filter((element) => {
+        const style = getComputedStyle(element);
+        const box = element.getBoundingClientRect();
+        return style.display !== 'none' && style.visibility !== 'hidden' && box.width > 0 && box.height > 0;
+      })
+      .map((element) => {
+        const box = element.getBoundingClientRect();
+        return { label: element.textContent?.trim() || element.getAttribute('aria-label') || element.tagName, width: box.width, height: box.height };
+      }));
+    for (const target of targets) {
+      expect(target.width, `${path}: ${target.label} width`).toBeGreaterThanOrEqual(44);
+      expect(target.height, `${path}: ${target.label} height`).toBeGreaterThanOrEqual(44);
     }
   }
+});
+
+test('home route focus returns to its heading', async ({ page }) => {
+  await page.goto('/privacy');
+  await page.getByRole('link', { name: 'Couch Crew home' }).click();
+  await expect(page).toHaveURL('/');
+  await expect(page.getByRole('heading', { name: 'Coordinate a heist from every phone' })).toBeFocused();
+});
+
+test('the first screen names the room audience and exact sample action', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await expect(page.getByText('For 3–6 friends or family members in one room. Share one room code.')).toBeVisible();
+  const sampleAction = page.getByRole('link', { name: 'Try it with sample data', exact: true });
+  await expect(sampleAction).toBeVisible();
+  expect((await sampleAction.boundingBox())!.y).toBeLessThan(844);
+});
+
+test('completed and lost runs delete their recovery save @claim:recovery-deletion', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => {
+    const key = 'couch-crew:v1:run';
+    const state = JSON.parse(localStorage.getItem(key)!);
+    Object.assign(state, { phase: 'active', missionIndex: 2, missionProgress: 19, hits: 47, pressure: 0, promptElapsed: 17.5, answerLocked: false });
+    localStorage.setItem(key, JSON.stringify(state));
+  });
+  await page.reload();
+  await pressCorrect(page);
+  await expect(page.getByRole('heading', { name: 'The crew cleared the route' })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('couch-crew:v1:run'))).toBeNull();
+
+  await page.goto('/');
+  await page.evaluate(() => {
+    const key = 'couch-crew:v1:run';
+    const state = JSON.parse(localStorage.getItem(key)!);
+    Object.assign(state, { phase: 'active', pressure: 99, promptElapsed: 0, answerLocked: false });
+    localStorage.setItem(key, JSON.stringify(state));
+  });
+  await page.reload();
+  await page.locator('.role-strip:not(.is-called) [data-game-action]').first().click();
+  await expect(page.getByRole('heading', { name: 'Pressure reached 100' })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('couch-crew:v1:run'))).toBeNull();
+});
+
+test('Couch Crew has no chat @claim:no-chat', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByText('It has no accounts, chat, ads, or payment.')).toBeVisible();
+  await expect(page.locator('textarea, [contenteditable="true"], input[name*="chat" i], input[name*="message" i]')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /chat|message|send/i })).toHaveCount(0);
 });
 
 test('pause and result overlays take focus and make game controls inert', async ({ page }) => {
@@ -183,28 +255,6 @@ test('pause and result overlays take focus and make game controls inert', async 
   await loseRun(page);
   await expect(page.getByRole('dialog', { name: 'Pressure reached 100' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Try this run again' })).toBeFocused();
-});
-
-test('the live game renders at 60 frames per second on a 390 px screen @claim:rendered-frame-rate', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/demo');
-  const framesPerSecond = await page.evaluate(async () => new Promise<number>((resolve) => {
-    let first = 0;
-    let last = 0;
-    let frames = 0;
-    const sample = (time: number) => {
-      if (!first) first = time;
-      last = time;
-      frames += 1;
-      if (frames === 120) resolve((frames - 1) * 1000 / (last - first));
-      else requestAnimationFrame(sample);
-    };
-    requestAnimationFrame(sample);
-  }));
-  // Browser scheduling varies under the parallel suite; 50–65 fps is the
-  // documented 60 fps target with a measured ten-frame tolerance.
-  expect(framesPerSecond).toBeGreaterThanOrEqual(50);
-  expect(framesPerSecond).toBeLessThanOrEqual(65);
 });
 
 test('the cold home screen shows the live command deck at desktop and 390 px', async ({ page }) => {

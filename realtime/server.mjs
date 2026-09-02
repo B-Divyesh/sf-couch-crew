@@ -202,6 +202,9 @@ export function createRealtimeServer({
 }
 
 if (process.argv[1] && new URL(import.meta.url).pathname === process.argv[1]) {
-  const server = createRealtimeServer();
+  const testLimits = process.env.COUCH_CREW_TEST_MODE === '1'
+    ? { health: { limit: 10_000, windowMs: 60_000 }, websocket: { limit: 10_000, windowMs: 60_000 } }
+    : RATE_LIMIT_POLICY;
+  const server = createRealtimeServer({ limits: testLimits });
   server.listen().then(() => console.log(`Couch Crew signalling on ${process.env.PORT || 8787}`));
 }

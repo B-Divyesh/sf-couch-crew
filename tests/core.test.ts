@@ -1,5 +1,36 @@
 import { describe, expect, it } from 'vitest';
-import { STEP, TICK_RATE, createGame, dispatchAction, missions, promptFor, startMission, tickGame, totalPrompts } from '../src/core';
+import {
+  BRIEFING_TARGET_SECONDS,
+  MIN_PROMPT_CADENCE_SECONDS,
+  REPRESENTATIVE_RESPONSE_SECONDS,
+  STEP,
+  TICK_RATE,
+  createGame,
+  dispatchAction,
+  missions,
+  promptFor,
+  startMission,
+  tickGame,
+  totalPrompts,
+  type GameState,
+} from '../src/core';
+
+function playTimedRun(responseSeconds: number, lockBeforeWaiting = false): GameState {
+  const game = createGame(5, { seed: 77, active: true });
+  let moves = 0;
+  while (game.phase !== 'won' && moves < totalPrompts()) {
+    if (game.phase === 'briefing') startMission(game);
+    if (lockBeforeWaiting) {
+      dispatchAction(game, game.prompt.roleIndex, game.prompt.actionIndex);
+      tickGame(game, responseSeconds);
+    } else {
+      tickGame(game, responseSeconds);
+      dispatchAction(game, game.prompt.roleIndex, game.prompt.actionIndex);
+    }
+    moves += 1;
+  }
+  return game;
+}
 
 describe('deterministic game core', () => {
   it('returns the same prompt sequence for one seed', () => {
@@ -9,22 +40,34 @@ describe('deterministic game core', () => {
   });
 
   it('plays all three missions to a win', () => {
-    const game = createGame(5, { seed: 77 });
-    let actions = 0;
-    while (game.phase !== 'won' && actions < 100) {
-      if (game.phase === 'briefing') startMission(game);
-      dispatchAction(game, game.prompt.roleIndex, game.prompt.actionIndex);
-      actions += 1;
-    }
+    const game = playTimedRun(MIN_PROMPT_CADENCE_SECONDS, true);
     expect(game.phase).toBe('won');
-    expect(actions).toBe(totalPrompts());
+    expect(game.hits).toBe(totalPrompts());
     expect(game.missionIndex).toBe(missions.length - 1);
   });
 
-  it('sets an 18-minute session target @claim:session-length', () => {
-    const promptAllowance = missions.reduce((seconds, mission) => seconds + mission.target * mission.promptSeconds, 0);
-    expect(promptAllowance).toBeGreaterThanOrEqual(17 * 60);
-    expect(promptAllowance).toBeLessThanOrEqual(18 * 60);
+  it('completes a paced representative 18-minute session @claim:session-length', () => {
+    const fastestRun = playTimedRun(MIN_PROMPT_CADENCE_SECONDS, true);
+    const representativeRun = playTimedRun(REPRESENTATIVE_RESPONSE_SECONDS);
+    const couchSessionSeconds = representativeRun.elapsed + missions.length * BRIEFING_TARGET_SECONDS;
+
+    expect(fastestRun.phase).toBe('won');
+    expect(fastestRun.elapsed).toBeGreaterThanOrEqual(14 * 60);
+    expect(representativeRun.phase).toBe('won');
+    expect(representativeRun.hits).toBe(48);
+    expect(couchSessionSeconds).toBeGreaterThanOrEqual(17 * 60);
+    expect(couchSessionSeconds).toBeLessThanOrEqual(18 * 60);
+  });
+
+  it('locks an early correct move until the real-game cadence', () => {
+    const game = createGame(5, { seed: 5, active: true });
+    dispatchAction(game, game.prompt.roleIndex, game.prompt.actionIndex);
+    expect(game.answerLocked).toBe(true);
+    expect(game.missionProgress).toBe(0);
+    tickGame(game, MIN_PROMPT_CADENCE_SECONDS - 0.01);
+    expect(game.missionProgress).toBe(0);
+    tickGame(game, 0.01);
+    expect(game.missionProgress).toBe(1);
   });
 
   it('calm pressure reduces alarm growth @claim:assist-mode', () => {

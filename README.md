@@ -1,6 +1,6 @@
 # Couch Crew
 
-Play a three-mission cooperative heist with 3–6 friends. Open the shared command screen, then each friend joins its four-letter room from a phone for a different two-button job. A complete run needs 48 correct moves and is designed for one 18-minute couch session.
+Play a three-mission cooperative heist with 3–6 friends or family members in one room. Open the shared command screen, then each phone joins its four-letter room for a different two-button job. A paced run needs 48 correct moves, lasts at least 14 minutes, and targets an 18-minute couch session.
 
 Couch Crew is for friends who want coordinated action instead of trivia or competitive microgames. It runs in a browser with phone controls, touch controls, or number keys. There are no accounts or payments.
 
@@ -16,7 +16,7 @@ One-click sample: <https://couch-crew.sociobot.in/demo>
 4. Press the called role action before pressure reaches 100.
 5. Clear Garage exit, Skybridge, and Vault run.
 
-Touch and number-key controls both work. Keys `1` through `0` match the ten visible buttons. Press `P` to pause. Calm pressure slows the alarm for groups that want more time.
+Touch and number-key controls both work. Keys `1` through `0` match the ten visible buttons. A correct move locks immediately, then the next call arrives on the 17.5-second beat. Press `P` to pause. Calm pressure slows the alarm for groups that want more time.
 
 The host screen also keeps all ten controls as a touch and keyboard fallback. Phone rooms are anonymous and contain no chat or accounts. The host game uses a fixed 60 Hz simulation timestep and renders at 60 frames per second on a 390 px screen.
 
@@ -52,7 +52,7 @@ npm test
 npm run build
 ```
 
-`npm test` runs the deterministic core suite and Playwright browser suite. The browser suite covers the complete run, replay, storage, offline reload, privacy, keyboard, touch, mobile width, and automated accessibility checks.
+`npm test` runs the deterministic core, room service, deployment policy, and browser suites. Functional browser checks use two workers. The repeated frame-rate measurement runs afterward in one isolated worker so browser contention cannot change the result.
 
 `npm run build` writes the static deploy to `dist/`. The deploy root contains `index.html`, the service worker, fallback 404 page, metadata, and responsive art.
 

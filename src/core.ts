@@ -1,5 +1,8 @@
 export const TICK_RATE = 60;
 export const STEP = 1 / TICK_RATE;
+export const MIN_PROMPT_CADENCE_SECONDS = 17.5;
+export const REPRESENTATIVE_RESPONSE_SECONDS = 19;
+export const BRIEFING_TARGET_SECONDS = 50;
 
 export const roles = [
   { id: 'driver', name: 'Driver', color: 'cyan', actions: ['Veer left', 'Veer right'], keys: ['1', '2'] },
@@ -21,9 +24,9 @@ export interface Mission {
 }
 
 export const missions: Mission[] = [
-  { name: 'Garage exit', objective: 'Clear the shutters before they lock.', target: 12, promptSeconds: 24, pressurePerSecond: 0.24 },
-  { name: 'Skybridge', objective: 'Cross while the patrol turns away.', target: 16, promptSeconds: 22, pressurePerSecond: 0.34 },
-  { name: 'Vault run', objective: 'Move the case through the final route.', target: 20, promptSeconds: 20, pressurePerSecond: 0.48 },
+  { name: 'Garage exit', objective: 'Clear the shutters before they lock.', target: 12, promptSeconds: 24, pressurePerSecond: 0.10 },
+  { name: 'Skybridge', objective: 'Cross while the patrol turns away.', target: 16, promptSeconds: 22, pressurePerSecond: 0.14 },
+  { name: 'Vault run', objective: 'Move the case through the final route.', target: 20, promptSeconds: 20, pressurePerSecond: 0.18 },
 ];
 
 export interface Prompt {
@@ -43,6 +46,8 @@ export interface GameState {
   pressure: number;
   prompt: Prompt;
   promptTime: number;
+  promptElapsed: number;
+  answerLocked: boolean;
   elapsed: number;
   hits: number;
   misses: number;
@@ -95,6 +100,8 @@ export function createGame(playerCount: number, options: { seed?: number; demo?:
     pressure: demo ? 18 : 0,
     prompt: promptFor(seed, 0),
     promptTime: demo ? 8 : missions[0].promptSeconds,
+    promptElapsed: 0,
+    answerLocked: false,
     elapsed: 0,
     hits: demo ? 4 : 0,
     misses: 0,
@@ -110,20 +117,58 @@ function nextPrompt(state: GameState): void {
   state.prompt = promptFor(state.seed, state.prompt.serial + 1);
   const base = missions[state.missionIndex].promptSeconds;
   state.promptTime = state.demo ? Math.min(8, base) : base;
+  state.promptElapsed = 0;
+  state.answerLocked = false;
+}
+
+function normalizePacing(state: GameState): void {
+  if (!Number.isFinite(state.promptElapsed)) state.promptElapsed = 0;
+  if (typeof state.answerLocked !== 'boolean') state.answerLocked = false;
 }
 
 export function startMission(state: GameState): GameState {
   if (state.phase === 'briefing') {
     state.phase = 'active';
     state.promptTime = state.demo ? 8 : missions[state.missionIndex].promptSeconds;
+    state.promptElapsed = 0;
+    state.answerLocked = false;
   }
   return state;
 }
 
+function completeCorrectMove(state: GameState): void {
+  state.hits += 1;
+  state.streak += 1;
+  state.bestStreak = Math.max(state.bestStreak, state.streak);
+  state.pressure = Math.max(0, state.pressure - 2.5);
+  state.missionProgress += 1;
+
+  if (state.missionProgress >= missions[state.missionIndex].target) {
+    if (state.missionIndex === missions.length - 1) {
+      state.phase = 'won';
+      state.answerLocked = false;
+    } else {
+      state.missionIndex += 1;
+      state.missionProgress = 0;
+      state.phase = 'briefing';
+      state.pressure = Math.max(0, state.pressure - 12);
+      nextPrompt(state);
+    }
+  } else {
+    nextPrompt(state);
+  }
+}
+
 export function tickGame(state: GameState, seconds: number): GameState {
   if (state.phase !== 'active' || state.paused) return state;
+  normalizePacing(state);
   const mission = missions[state.missionIndex];
   state.elapsed += seconds;
+  state.promptElapsed += seconds;
+  if (state.answerLocked) {
+    if (state.demo || state.promptElapsed >= MIN_PROMPT_CADENCE_SECONDS) completeCorrectMove(state);
+    return state;
+  }
   state.promptTime -= seconds;
   const calmFactor = state.calmMode ? 0.55 : 1;
   state.pressure = Math.min(100, state.pressure + seconds * mission.pressurePerSecond * calmFactor);
@@ -139,6 +184,8 @@ export function tickGame(state: GameState, seconds: number): GameState {
 
 export function dispatchAction(state: GameState, roleIndex: number, actionIndex: number): GameState {
   if (state.phase !== 'active' || state.paused) return state;
+  normalizePacing(state);
+  if (state.answerLocked) return state;
   if (state.prompt.roleIndex !== roleIndex || state.prompt.actionIndex !== actionIndex) {
     state.misses += 1;
     state.streak = 0;
@@ -147,25 +194,8 @@ export function dispatchAction(state: GameState, roleIndex: number, actionIndex:
     return state;
   }
 
-  state.hits += 1;
-  state.streak += 1;
-  state.bestStreak = Math.max(state.bestStreak, state.streak);
-  state.pressure = Math.max(0, state.pressure - 2.5);
-  state.missionProgress += 1;
-
-  if (state.missionProgress >= missions[state.missionIndex].target) {
-    if (state.missionIndex === missions.length - 1) {
-      state.phase = 'won';
-    } else {
-      state.missionIndex += 1;
-      state.missionProgress = 0;
-      state.phase = 'briefing';
-      state.pressure = Math.max(0, state.pressure - 12);
-      nextPrompt(state);
-    }
-  } else {
-    nextPrompt(state);
-  }
+  state.answerLocked = true;
+  if (state.demo || state.promptElapsed >= MIN_PROMPT_CADENCE_SECONDS) completeCorrectMove(state);
   return state;
 }
 
