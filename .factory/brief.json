@@ -1,0 +1,12 @@
+{
+  "slug": "couch-crew",
+  "title": "Couch Crew",
+  "territory": "games-creative",
+  "user": "Friends in one room who want a 20-minute cooperative party game where every phone has a meaningful, different role.",
+  "smallest_useful_product": "A one-screen, 3–6 player 18-minute heist: driver, lookout, hacker, loader, and dispatcher use two-button phone controls through three escalating missions.",
+  "success_measure": "At least 35% of rooms start a second mission within 24 hours and median room completion exceeds 14 minutes.",
+  "artifact_class": "browser-game",
+  "monetization": "free",
+  "constraints": "Use short room codes and anonymous ephemeral sessions; no copyrighted character or minigame imitation; support touch and keyboard fallback.",
+  "summary": "Play an 18-minute cooperative heist with 3–6 friends and two-button roles."
+}
