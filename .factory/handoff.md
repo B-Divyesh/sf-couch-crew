@@ -39,7 +39,7 @@ Live checks on 2026-09-02:
 - `https://couch-crew.sociobot.in/definitely-missing-qa` returned HTTP 404 and the designed 404 document.
 - Fresh local and live static JavaScript SHA-256 matched: `1fe32dd600351f76ee3de725fbaae7a9977de0b32a0386eb5ccb4ef0cbe7c590`.
 - Live realtime health returned `{"service":"couch-crew-realtime","rooms":0,"buildId":"7f9637ae39bd54a36dee559cc174518d5436f773"}`.
-- Live probes reached the enforced policy: health returned 429 with `Retry-After: 14`; a hostile WebSocket Origin returned 403; a permitted origin exceeded its allowance and received 429 with `Retry-After: 31`.
+- Live probes against the final realtime build reached the enforced policy: health returned 429 with `Retry-After: 29`; a hostile WebSocket Origin returned 403; a permitted origin exceeded its allowance and received 429 with `Retry-After: 60`.
 
 The standalone `@axe-core/cli` launcher could not find a system Chrome binary in this container. The repository’s Playwright `@axe-core/playwright` integration ran instead, locally and against the deployed site, using the preinstalled Chromium browser.
 
