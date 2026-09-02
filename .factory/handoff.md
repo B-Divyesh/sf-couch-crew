@@ -1,5 +1,15 @@
 # Couch Crew repair handoff
 
+## Independent verification — PASS
+
+Candidate `0d27a4dcc8aa26cae50df8c5629046f03f73c2ae` was independently accepted
+on 2026-09-02 against <https://couch-crew.sociobot.in>. Fresh clean-install
+claims, lint, typecheck, full test suite, and production build passed. The
+deployed HTML, hashed JS, and CSS match this candidate byte-for-byte. See
+`.factory/verification-4.md` for exact functional, accessibility, privacy,
+offline, mobile, WebSocket-origin, and rate-limit evidence. No known gaps or
+release-blocking defects remain.
+
 ## Release result
 
 **PASS — repaired, pushed, and deployed on September 2, 2026.**
