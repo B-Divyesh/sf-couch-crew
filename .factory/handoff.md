@@ -55,7 +55,7 @@ All 19 entries in `.factory/claims.json` have exactly one tagged regression. The
 - Factory `verify-url.sh`: HTTP 200 in 674 ms with zero console/page errors; title, language, h1, main, alt text, and button-name checks pass.
 - Live browser subset: 11/11 passed serially against production, covering a complete run, touch/keyboard, phone controller, both request policies, offline update/reload, axe on all five routes, all 390 px targets, home focus, first-screen copy, and dialog focus/inert behavior.
 - Live frame samples at 390 px: 60.00, 60.00, 60.00, 60.00, 60.00 fps; median 60.00 fps.
-- Live Lighthouse 13 mobile: Performance 100, Accessibility 100, Best Practices 100, SEO 100; FCP 911 ms, LCP 1,511 ms, TBT 0 ms, CLS 0.0073, transfer 120,638 bytes.
+- Live Lighthouse 13 mobile: Performance 100, Accessibility 100, Best Practices 100, SEO 100; FCP 912 ms, LCP 1,512 ms, TBT 32 ms, CLS 0.0069, transfer 120,664 bytes.
 - `/`, `/demo`, `/controller`, `/privacy`, `/terms`, `robots.txt`, and `sitemap.xml` return 200. An unknown route returns the designed page with HTTP 404.
 - Live headers include CSP with the product room service allowlisted and `frame-ancestors 'none'`, HSTS, `nosniff`, strict-origin referrer policy, permissions policy, and 30-second HTML revalidation.
 - The deployed JavaScript SHA-256 equals the local build: `5c53a641b86dbe39e3167142cf2d55e68da83e10f87039e0d2d18397d28bb0f1`.
