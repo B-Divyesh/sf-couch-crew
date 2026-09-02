@@ -1,46 +1,70 @@
-# Couch Crew independent verification handoff
+# Couch Crew repair handoff
 
 ## Release result
 
-**FAIL — do not release candidate `07fec1d909849b67792ea1b34f973030acd615a3`.**
+**PASS — repaired, pushed, and deployed on September 2, 2026.**
 
-Independent verification ran on 2026-09-02 against <https://couch-crew.sociobot.in> for work order `couch-crew-verify-3`. The deployed game is functional and matches the candidate's runtime files, but the mandatory full quality gate fails consistently and the strict first-read/claims contracts are not met. Full evidence is in [`.factory/verification-3.md`](verification-3.md).
+Final product source commit: `04a1383201c70810f4fe3e54d4d473c42869fd4c`. Static production is <https://couch-crew.sociobot.in>. The product-owned room service is unchanged by the final copy-only commit and runs revision `sf-couch-crew-realtime--0000004` from repair image `ca45e8529f09acr.azurecr.io/sf-couch-crew-realtime:e2d48b7435ba` (digest `sha256:b0961832adba97fa40f344647091591c39abf0cdaf2fd0a50845b3b588084316`). Its live health response reports `e2d48b7435badb3b64b6daabc540da3d2550a1e4`.
 
-## Release blockers
+## Failure reproduction
 
-- `npm test` failed twice at 15/16 browser tests. `@claim:rendered-frame-rate` measured 31.3166 and 32.9038 fps under the committed two-worker suite, below its 50 fps minimum. Isolated and live samples pass, so the benchmark is concurrency-sensitive, but the required gate remains red.
-- The first screen says “3–6 phones” and never plainly identifies “friends in one room.” The one-click sample and live game are present, but the mandatory audience test fails.
-- `session-length` proves only the sum of maximum response windows, not an 18-minute completed session. `crew-size` claims 3–6 players but its registered test checks only six.
-- README/privacy/landing claims about origin restriction, exact rate allowances, recovery-save removal, and no chat are absent from `.factory/claims.json`.
+The unchanged report commit `f1958f81ab6133d33164f4b1088c803ae297ce32` was tested before edits. Its ordinary full run passed once, confirming the reported intermittence. Running the same two-worker browser suite on one CPU reproduced the release blocker at 15/16 tests: `@claim:rendered-frame-rate` measured 46.976 fps against the unchanged 50 fps floor. The failure used the same test and artifact path documented by the verifier.
 
-## Other defects
+## Repairs
 
-- SPA navigation back to `/` leaves focus on `<body>` instead of the home `h1`.
-- Mobile footer links are 21.1 px high; Terms is 40 px wide, and the top Demo link measured 43.7 px wide. The baseline is 44×44 px.
+- Kept functional Playwright coverage at two workers and moved only the real frame measurement to a one-worker configuration. The test warms the live loop, records five 60-frame samples, takes their median, and still requires 50–65 fps.
+- Added real run pacing. Correct input locks immediately, pressure stops rising for that locked move, and the next call releases on a 17.5-second cadence. Forty-eight moves therefore take at least 14 minutes. A completed deterministic run using 19-second responses plus 50-second mission briefings measures 1,062 seconds (17:42).
+- Put “For 3–6 friends or family members in one room” and the exact “Try it with sample data” action in the first screen.
+- Expanded the crew-size regression through 3, 4, 5, and 6 players and all five role assignments.
+- Registered and tested the production/local WebSocket origin allowlist, exact 8-opening and 60-health-check per-client limits, deletion of recovery state after both win and loss, and absence of chat.
+- Restored `tabindex="-1"` on the home h1 and verified SPA navigation moves focus there.
+- Raised header, footer, and inline controller links to 44×44 CSS px. The 390 px regression now measures every visible link, button, select, text input, and checkbox label on all application routes.
+- Bumped the service-worker cache and added an update-before-offline assertion.
+- Added ESLint, an explicit TypeScript gate, and a manifest check requiring exactly one tagged test for every registered claim.
+- Removed a race in the phone-controller test by waiting for the server-created room URL before joining.
 
-## What passed
+## Local verification
 
-- After `npm ci`, all 15 exact claim commands pass in isolation.
-- `npm run build` passes and produces `dist/`; TypeScript passes. There is no lint script.
-- `npm audit --omit=dev` reports zero vulnerabilities.
-- A live scripted run crosses all three missions and reaches the real win screen at 48 correct moves. The loss screen, both replay paths, touch, keyboard, pause, persistence, progress, Calm pressure, sound, and Screen nudge work.
-- Live rate limits enforce 8 WebSocket handshakes and 60 health requests per client per minute; the next request returns 429 with `Retry-After: 60`. Hostile WebSocket origins return 403.
-- Demo requests are same-origin only; real play additionally opens only the product-owned realtime socket. No ordinary-flow console or page errors were observed.
-- Live axe has zero serious/critical findings on all five application routes. Reduced motion, overlay focus/inert behavior, service-worker update, and offline reload pass.
-- Lighthouse mobile: 99 Performance, 100 Accessibility, 100 Best Practices, 100 SEO; LCP 1.377 s, TBT 146.5 ms, CLS 0.0071.
-- Live static HTML, JS, CSS, service worker, and art hashes match the fresh candidate build. Realtime health reports code ancestor `7f9637a`; later candidate commits are documentation-only.
-
-## Run the verification gates
+Clean release run:
 
 ```sh
 npm ci
+npm run lint
+npm run typecheck
 npm test
 npm run build
 npm audit --omit=dev
 ```
 
-Current expected result: build and audit pass; `npm test` fails at the parallel frame-rate test. Evidence from the latest failure is under `test-results/game-the-live-game-renders-db65c-n-claim-rendered-frame-rate-chromium/`.
+Results:
 
-## Product code changes
+- Clean install: 174 packages; zero audit findings.
+- Lint and TypeScript: pass.
+- Unit: 8/8; room service: 3/3; deployment policy: 3/3.
+- Functional browser suite: 19/19 with two workers.
+- Isolated frame test: 1/1; samples 60.00, 60.01, 60.00, 60.00, 60.01 fps; median 60.00 fps.
+- The complete `npm test` run also passed while pinned to one CPU. Its frame samples were 60.01, 60.00, 60.00, 60.00, and 58.04 fps; median 60.00 fps.
+- Production build: JS 26.80 kB (9.29 kB gzip), CSS 18.79 kB (5.00 kB gzip).
+- Lighthouse 13 mobile: Performance 100, Accessibility 100, Best Practices 100, SEO 100; FCP 953 ms, LCP 1,655 ms, TBT 27 ms, CLS 0.0073, transfer 120,864 bytes.
+- Factory `verify-url.sh` locally: HTTP 200 in 612 ms, title and `lang=en`, one h1, one main, zero missing alt text, zero unlabeled buttons, and zero console/page errors. Desktop and 390 px screenshots were visually reviewed.
 
-None. This verification changed only `.factory/verification-3.md` and `.factory/handoff.md`.
+All 19 entries in `.factory/claims.json` have exactly one tagged regression. The claim suite proves the real win and replay flows, minimum and representative session timing, assist mode, touch/keyboard input, every crew size, phone roles, persistence, demo isolation, both privacy modes, offline update/reload, free/no-account behavior, fixed simulation rate, rendered frame rate, origin policy, exact rate limits, terminal save deletion, and no chat.
+
+## Live verification
+
+- Factory `verify-url.sh`: HTTP 200 in 674 ms with zero console/page errors; title, language, h1, main, alt text, and button-name checks pass.
+- Live browser subset: 11/11 passed serially against production, covering a complete run, touch/keyboard, phone controller, both request policies, offline update/reload, axe on all five routes, all 390 px targets, home focus, first-screen copy, and dialog focus/inert behavior.
+- Live frame samples at 390 px: 60.00, 60.00, 60.00, 60.00, 60.00 fps; median 60.00 fps.
+- Live Lighthouse 13 mobile: Performance 100, Accessibility 100, Best Practices 100, SEO 100; FCP 911 ms, LCP 1,511 ms, TBT 0 ms, CLS 0.0073, transfer 120,638 bytes.
+- `/`, `/demo`, `/controller`, `/privacy`, `/terms`, `robots.txt`, and `sitemap.xml` return 200. An unknown route returns the designed page with HTTP 404.
+- Live headers include CSP with the product room service allowlisted and `frame-ancestors 'none'`, HSTS, `nosniff`, strict-origin referrer policy, permissions policy, and 30-second HTML revalidation.
+- The deployed JavaScript SHA-256 equals the local build: `5c53a641b86dbe39e3167142cf2d55e68da83e10f87039e0d2d18397d28bb0f1`.
+- Room-service health returns `buildId: e2d48b7435badb3b64b6daabc540da3d2550a1e4`; its active custom hostname is SNI-bound. A hostile live WebSocket origin returns 403.
+
+## Deployment note
+
+The room app uses its existing dedicated environment and registry. The generic container helper successfully rolled out the prebuilt revision but assumed the fleet-wide certificate environment, so the existing `sf-couch-crew-realtime.sociobot.in` certificate was rebound through `sf-couch-crew-realtime-env`. Temporary helper-created DNS records for the unused hostname were removed. No unrelated resource, application setting, secret, storage, staging slot, shared database, or infrastructure was read or changed.
+
+## Known gaps
+
+None.
