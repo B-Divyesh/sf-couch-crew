@@ -93,7 +93,7 @@ h3 { font-size: 1rem; line-height: 1.2; }
 
 .demo-banner { position: sticky; z-index: 30; top: 0; display: flex; min-height: 56px; align-items: center; justify-content: center; gap: 24px; padding: 8px 16px; color: var(--ink); background: var(--amber); font-family: var(--display); text-align: center; }
 .demo-actions { display: flex; gap: 8px; }
-.demo-banner button { min-height: 40px; padding: 7px 12px; color: var(--ink); border: 2px solid var(--ink); background: transparent; font-weight: 800; cursor: pointer; }
+.demo-banner button { min-height: 44px; padding: 7px 12px; color: var(--ink); border: 2px solid var(--ink); background: transparent; font-weight: 800; cursor: pointer; }
 .demo-banner button:last-child { color: var(--paper); background: var(--ink); }
 .demo-main { min-height: 80vh; padding: clamp(32px, 5vw, 64px) clamp(12px, 3vw, 48px) 80px; background: #090d1a url('/art/couch-crew-night-road-1280.webp') center / cover fixed; }
 .host-main { padding: clamp(16px, 3vw, 40px) clamp(12px, 4vw, 64px) 0; background: #090d1a url('/art/couch-crew-night-road-1280.webp') center top / cover fixed; }
@@ -104,7 +104,7 @@ h3 { font-size: 1rem; line-height: 1.2; }
 .host-intro > p { margin: 0; color: var(--muted); }
 .host-intro .button { margin-bottom: 0; }
 .host-crew { display: inline-flex; min-height: 44px; align-items: center; gap: 6px; margin: 10px 0 0; color: var(--muted); font-size: .78rem; }
-.host-crew select, .host-crew button { min-height: 38px; padding: 5px 8px; color: var(--paper); border: 1px solid #566387; border-radius: 0; background: var(--panel-raised); }
+.host-crew select, .host-crew button { min-height: 44px; padding: 5px 8px; color: var(--paper); border: 1px solid #566387; border-radius: 0; background: var(--panel-raised); }
 .host-crew button { cursor: pointer; }
 .host-main .game-mount { max-width: 1220px; }
 .compact-how { margin: clamp(48px, 8vw, 104px) calc(clamp(12px, 4vw, 64px) * -1) 0; background: rgba(8, 11, 22, .96); }

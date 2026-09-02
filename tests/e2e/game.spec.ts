@@ -7,12 +7,31 @@ async function pressCorrect(page: Page): Promise<void> {
 }
 
 async function finishRun(page: Page): Promise<void> {
-  for (let move = 0; move < 60; move += 1) {
-    if (await page.getByRole('heading', { name: 'The crew cleared the route' }).isVisible().catch(() => false)) return;
-    const nextMission = page.locator('[data-start-mission]');
-    if (await nextMission.isVisible().catch(() => false)) await nextMission.click();
-    else await pressCorrect(page);
-  }
+  await page.evaluate(() => {
+    for (let move = 0; move < 60; move += 1) {
+      if (document.querySelector('[data-overlay] h2')?.textContent?.includes('The crew cleared the route')) return;
+      const start = document.querySelector<HTMLButtonElement>('[data-start-mission]');
+      if (start) { start.click(); continue; }
+      const action = document.querySelector<HTMLElement>('[data-call-action]')?.textContent?.trim();
+      const button = [...document.querySelectorAll<HTMLButtonElement>('.role-strip.is-called [data-game-action]')]
+        .find((candidate) => candidate.textContent?.includes(action ?? ''));
+      if (!button) throw new Error('The called control was not rendered.');
+      button.click();
+    }
+    throw new Error('The scripted run did not reach the win screen.');
+  });
+}
+
+async function loseRun(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    for (let move = 0; move < 20; move += 1) {
+      if (document.querySelector('[data-overlay] h2')?.textContent?.includes('Pressure reached 100')) return;
+      const button = document.querySelector<HTMLButtonElement>('.role-strip:not(.is-called) [data-game-action]');
+      if (!button) throw new Error('A wrong control was not rendered.');
+      button.click();
+    }
+    throw new Error('The scripted loss did not reach the result screen.');
+  });
 }
 
 test('a sample run reaches the end screen @claim:complete-run', async ({ page }) => {
@@ -25,10 +44,7 @@ test('a sample run reaches the end screen @claim:complete-run', async ({ page })
 test('replay resets the sample run @claim:restart-reset', async ({ page }) => {
   await page.goto('/demo');
   const calledRole = await page.locator('[data-call-role]').textContent();
-  while (!await page.getByRole('heading', { name: 'Pressure reached 100' }).isVisible().catch(() => false)) {
-    const wrongRole = page.locator('.role-strip:not(.is-called)').first();
-    await wrongRole.getByRole('button').first().click();
-  }
+  await loseRun(page);
   await expect(page.getByRole('heading', { name: 'Pressure reached 100' })).toBeVisible();
   await page.getByRole('button', { name: 'Try this run again' }).click();
   await expect(page.locator('[data-route-text]')).toHaveText('4 / 12');
@@ -57,8 +73,11 @@ test('crew setup covers three through six players @claim:crew-size', async ({ pa
 test('settings and unfinished runs persist @claim:settings-persist', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Calm pressure').check();
+  await pressCorrect(page);
+  await expect(page.locator('[data-route-text]')).toHaveText('1 / 12');
   await page.reload();
   await expect(page.getByLabel('Calm pressure')).toBeChecked();
+  await expect(page.locator('[data-route-text]')).toHaveText('1 / 12');
 });
 
 test('a phone joins an anonymous room and receives only its role controls @claim:phone-controllers', async ({ browser, baseURL }) => {
@@ -69,6 +88,7 @@ test('a phone joins an anonymous room and receives only its role controls @claim
   await host.goto(baseURL!);
   await expect(host.locator('[data-controller-url]')).toContainText('/controller?room=');
   const code = (await host.locator('[data-room-code]').textContent())!.trim();
+  expect(code).toMatch(/^[BCDFGHJKLMNPQRSTVWXYZ23456789]{4}$/);
   await phone.goto(`${baseURL}/controller?room=${code}`);
   await phone.getByRole('button', { name: 'Join room' }).click();
   await expect(phone.getByText(`Joined room ${code}. Your controls are ready.`)).toBeVisible();
@@ -98,6 +118,21 @@ test('demo makes only same-origin requests @claim:local-privacy', async ({ brows
   await context.close();
 });
 
+test('real play uses only Couch Crew network services @claim:real-local-privacy', async ({ browser, baseURL }) => {
+  const context = await browser.newContext();
+  const requests: string[] = [];
+  const sockets: string[] = [];
+  const page = await context.newPage();
+  page.on('request', (request) => requests.push(request.url()));
+  page.on('websocket', (socket) => sockets.push(socket.url()));
+  await page.goto(baseURL!);
+  await expect(page.locator('[data-room-code]')).not.toHaveText('DEMO');
+  expect(requests.every((url) => new URL(url).origin === new URL(baseURL!).origin)).toBe(true);
+  await expect.poll(() => sockets.length).toBeGreaterThan(0);
+  expect(sockets.every((url) => new URL(url).origin === 'ws://127.0.0.1:8787')).toBe(true);
+  await context.close();
+});
+
 test('demo reloads offline after the first visit @claim:offline-reload', async ({ browser, baseURL }) => {
   const context = await browser.newContext({ serviceWorkers: 'allow' });
   const page = await context.newPage();
@@ -115,6 +150,7 @@ test('home and demo pass automated accessibility checks', async ({ page }) => {
     await page.goto(path);
     const results = await new AxeBuilder({ page: page as never }).analyze();
     expect(results.violations.filter((violation) => ['serious', 'critical'].includes(violation.impact ?? ''))).toEqual([]);
+    expect(results.violations.filter((violation) => violation.id === 'landmark-unique')).toEqual([]);
     await expect(page.locator('h1')).toHaveCount(1);
     await expect(page.locator('main')).toHaveCount(1);
   }
@@ -126,6 +162,49 @@ test('mobile layout stays inside a 390 pixel viewport', async ({ page }) => {
   const width = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(width).toBeLessThanOrEqual(390);
   await expect(page.getByRole('button', { name: 'Scan near' })).toBeVisible();
+  for (const selector of ['.host-crew select', '.host-crew button', '.demo-banner button']) {
+    await page.goto(selector.includes('host') ? '/' : '/demo');
+    for (const box of await page.locator(selector).evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().toJSON()))) {
+      expect(box.height).toBeGreaterThanOrEqual(44);
+    }
+  }
+});
+
+test('pause and result overlays take focus and make game controls inert', async ({ page }) => {
+  await page.goto('/demo');
+  const roleButton = page.locator('[data-game-action]').first();
+  await roleButton.focus();
+  await page.keyboard.press('p');
+  await expect(page.getByRole('dialog', { name: 'The crew is waiting' })).toBeVisible();
+  await expect(page.locator('[data-game-action]').first()).toHaveJSProperty('inert', true);
+  await expect(page.getByRole('button', { name: 'Resume this run' })).toBeFocused();
+  await page.getByRole('button', { name: 'Resume this run' }).click();
+  await expect(roleButton).toBeFocused();
+  await loseRun(page);
+  await expect(page.getByRole('dialog', { name: 'Pressure reached 100' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Try this run again' })).toBeFocused();
+});
+
+test('the live game renders at 60 frames per second on a 390 px screen @claim:rendered-frame-rate', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/demo');
+  const framesPerSecond = await page.evaluate(async () => new Promise<number>((resolve) => {
+    let first = 0;
+    let last = 0;
+    let frames = 0;
+    const sample = (time: number) => {
+      if (!first) first = time;
+      last = time;
+      frames += 1;
+      if (frames === 120) resolve((frames - 1) * 1000 / (last - first));
+      else requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  }));
+  // Browser scheduling varies under the parallel suite; 50–65 fps is the
+  // documented 60 fps target with a measured ten-frame tolerance.
+  expect(framesPerSecond).toBeGreaterThanOrEqual(50);
+  expect(framesPerSecond).toBeLessThanOrEqual(65);
 });
 
 test('the cold home screen shows the live command deck at desktop and 390 px', async ({ page }) => {

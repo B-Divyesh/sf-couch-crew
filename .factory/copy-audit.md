@@ -1,27 +1,30 @@
 # Landing-page copy audit
 
-Audited September 2, 2026. Counts treat hyphenated terms and numerals as one word. No line exceeds 22 words. No line contains a banned marketing word.
+Audited September 2, 2026. Counts treat hyphenated terms and numerals as one word. No sentence exceeds 22 words or contains a banned marketing word.
 
 | Copy | Words | Result |
 | --- | ---: | --- |
 | 3–6 phones · 3 missions · 18 minutes | 7 | Pass |
 | Coordinate a heist from every phone | 7 | Pass |
-| Share the room code. Each phone gets one role and two controls. | 11 | Pass |
-| Try the sample mission | 4 | Pass |
 | Anonymous rooms | 2 | Pass |
 | Free, with no account | 4 | Pass |
 | Keyboard fallback | 2 | Pass |
-| Free, with no account | 4 | Pass |
+| Share the room code. | 4 | Pass |
+| Each phone gets one role and two controls. | 8 | Pass |
+| Try the sample mission | 4 | Pass |
 | How it works | 3 | Pass |
-| Join, call, clear | 3 | Pass |
-| Open the room on a shared screen | 7 | Pass |
-| Give friends the four-letter room code. | 6 | Pass |
-| Join from each phone | 5 | Pass |
-| Each phone receives a different role control. | 7 | Pass |
-| Press the called action | 4 | Pass |
-| Clear all three routes before pressure reaches 100. | 8 | Pass |
+| Coordinate three missions | 3 | Pass |
+| Assign the five jobs | 4 | Pass |
+| Smaller crews take two jobs. | 5 | Pass |
+| A sixth player becomes the dispatcher’s wildcard. | 7 | Pass |
+| Call the next move | 4 | Pass |
+| The screen names one job and action. | 8 | Pass |
+| That player presses their matching control. | 6 | Pass |
+| Keep pressure below 100 | 4 | Pass |
+| Correct moves clear the route. | 5 | Pass |
+| Wrong or late moves raise the alarm. | 7 | Pass |
 | Privacy and limits | 3 | Pass |
-| Your room stays private | 5 | Pass |
+| Your room stays on this browser | 6 | Pass |
 | Couch Crew stores settings and an unfinished host run in local storage. | 11 | Pass |
 | Room codes are anonymous. | 4 | Pass |
 | It has no accounts, chat, ads, or payment. | 8 | Pass |

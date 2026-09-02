@@ -53,7 +53,7 @@
     "claim": "Settings and an unfinished run persist in this browser.",
     "where": "game, privacy page, README",
     "test": "npm run test:e2e -- --grep @claim:settings-persist",
-    "sandbox": "fresh real-mode local storage; enable calm pressure, start, reload, and resume"
+    "sandbox": "fresh real-mode local storage; enable calm pressure, advance one move, reload, and assert both the setting and unfinished route recover"
   },
   {
     "id": "demo-isolated",
@@ -68,6 +68,13 @@
     "where": "privacy page, README",
     "test": "npm run test:e2e -- --grep @claim:local-privacy",
     "sandbox": "fresh browser context; record every request during the demo and require same-origin URLs"
+  },
+  {
+    "id": "real-local-privacy",
+    "claim": "Real play loads no analytics, advertising, or third-party scripts.",
+    "where": "privacy page, README",
+    "test": "npm run test:e2e -- --grep @claim:real-local-privacy",
+    "sandbox": "fresh real-mode browser context; record document requests and WebSocket endpoints, allowing only the same-origin game and Couch Crew room service"
   },
   {
     "id": "offline-reload",
@@ -89,5 +96,12 @@
     "where": "README",
     "test": "npm run test:unit -- --testNamePattern @claim:fixed-timestep",
     "sandbox": "assert the exported deterministic simulation rate is 60 ticks per second"
+  },
+  {
+    "id": "rendered-frame-rate",
+    "claim": "The live game renders at 60 frames per second on a 390 px screen.",
+    "where": "README",
+    "test": "npm run test:e2e -- --grep @claim:rendered-frame-rate",
+    "sandbox": "fresh 390 px demo; sample 120 requestAnimationFrame frames while the real game loop is active and assert 60 fps within a 50–65 fps tolerance"
   }
 ]

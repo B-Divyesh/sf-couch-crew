@@ -8,8 +8,10 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "realtime": "node realtime/server.mjs",
-    "test": "npm run test:unit && npm run test:e2e",
+    "test": "npm run test:unit && npm run test:realtime && npm run test:policy && npm run test:e2e",
     "test:unit": "vitest run tests/core.test.ts",
+    "test:realtime": "node --test tests/realtime.test.mjs",
+    "test:policy": "node --test tests/deployment.test.mjs",
     "test:e2e": "playwright test"
   },
   "devDependencies": {
@@ -22,6 +24,6 @@
     "vitest": "3.2.7"
   },
   "dependencies": {
-    "ws": "8.18.1"
+    "ws": "8.21.3"
   }
 }

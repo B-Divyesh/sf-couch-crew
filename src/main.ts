@@ -37,6 +37,7 @@ let accumulator = 0;
 let lastSavedSecond = -1;
 let realtime: WebSocket | null = null;
 let controller: { code: string; playerId: number; roleIndexes: number[]; snapshot: GameState | null } | null = null;
+let returnFocus: HTMLElement | null = null;
 
 function loadJson<T>(key: string, fallback: T): T {
   try {
@@ -92,15 +93,6 @@ function homePage(): string {
         <div><a class="button secondary" href="/demo" data-link>Try the sample mission</a><form class="host-crew" data-host-crew><label for="host-size">Crew</label><select id="host-size" name="players"><option value="3">3</option><option value="4">4</option><option value="5" selected>5</option><option value="6">6</option></select><button type="submit">Set crew</button></form></div>
       </section>
       <div id="host-game" class="game-mount"></div>
-      <section id="how" class="how-section compact-how" aria-labelledby="how-title">
-        <div class="section-heading"><p class="eyebrow">How it works</p><h2 id="how-title">Join, call, clear</h2></div>
-        <ol class="steps">
-          <li><span>01</span><div><h3>Open the room on a shared screen</h3><p>Give friends the four-letter room code.</p></div></li>
-          <li><span>02</span><div><h3>Join from each phone</h3><p>Each phone receives a different role control.</p></div></li>
-          <li><span>03</span><div><h3>Press the called action</h3><p>Clear all three routes before pressure reaches 100.</p></div></li>
-        </ol>
-      </section>
-
       <section id="how" class="how-section" aria-labelledby="how-title">
         <div class="section-heading"><p class="eyebrow">How it works</p><h2 id="how-title">Coordinate three missions</h2></div>
         <ol class="steps">
@@ -138,7 +130,7 @@ function controllerPage(): string {
 }
 
 function privacyPage(): string {
-  return shell(`<main id="main" class="text-page"><p class="eyebrow">Privacy</p><h1 tabindex="-1">See what stays in your browser</h1><p>Couch Crew does not ask for a name, email address, or account.</p><h2>Data stored here</h2><p>The host game stores sound, motion, assist settings, and an unfinished run in local storage. Demo mode does not write game data.</p><h2>Room signals</h2><p>Phone room codes and button presses travel only to Couch Crew’s own room service. It has no analytics, advertising, or third-party scripts.</p><h2>Delete your data</h2><p>Clear this site’s browser storage to remove settings and progress. A completed or lost run removes its recovery save.</p><p>Last updated: September 2, 2026.</p></main>`);
+  return shell(`<main id="main" class="text-page"><p class="eyebrow">Privacy</p><h1 tabindex="-1">See what stays in your browser</h1><p>Couch Crew does not ask for a name, email address, or account.</p><h2>Data stored here</h2><p>The host game stores sound, motion, assist settings, and an unfinished run in local storage. Demo mode does not write game data.</p><h2>Room signals</h2><p>Phone room codes and button presses travel only to Couch Crew’s own room service. Real play loads no analytics, advertising, or third-party scripts.</p><h2>Delete your data</h2><p>Clear this site’s browser storage to remove settings and progress. A completed or lost run removes its recovery save.</p><p>Last updated: September 2, 2026.</p></main>`);
 }
 
 function termsPage(): string {
@@ -258,6 +250,7 @@ function mountGame(host: HTMLElement): void {
 function gameMarkup(state: GameState): string {
   const mission = missions[state.missionIndex];
   return `<section class="game-console cut-panel ${state.demo ? 'is-demo' : ''}" aria-label="Shared heist command screen">
+    <div data-game-content>
     <div class="game-toolbar">
       <div><span class="status-label">ROOM</span><strong class="room-code" data-room-code>${escapeHtml(state.code)}</strong><small class="room-status" data-room-status>Connecting phones…</small></div>
       <div class="toolbar-actions">
@@ -287,8 +280,9 @@ function gameMarkup(state: GameState): string {
       <span>Keys 1–0 match the controls. Press P to pause.</span>
     </div>
     ${state.demo ? '' : `<p class="controller-link">Phones: <a data-controller-url href="/controller">Opening room…</a></p>`}
-    <div class="game-overlay" data-overlay hidden></div>
     <p class="game-message" data-game-message aria-live="polite"></p>
+    </div>
+    <div class="game-overlay" data-overlay hidden></div>
   </section>`;
 }
 
@@ -407,13 +401,13 @@ function setControllerStatus(text: string): void {
 function overlayMarkup(state: GameState): string {
   if (state.phase === 'briefing') {
     const mission = missions[state.missionIndex];
-    return `<div class="overlay-card"><p class="eyebrow">Mission ${state.missionIndex + 1} of 3</p><h2>${mission.name}</h2><p>${mission.objective}</p><p>${mission.target} correct moves clear this route.</p><button class="button primary" type="button" data-start-mission>Start ${mission.name}</button></div>`;
+    return `<div class="overlay-card" role="dialog" aria-modal="true" aria-labelledby="overlay-title"><p class="eyebrow">Mission ${state.missionIndex + 1} of 3</p><h2 id="overlay-title">${mission.name}</h2><p>${mission.objective}</p><p>${mission.target} correct moves clear this route.</p><button class="button primary" type="button" data-start-mission>Start ${mission.name}</button></div>`;
   }
   if (state.phase === 'won') {
-    return `<div class="overlay-card result"><p class="result-mark" aria-hidden="true">✓</p><h2>The crew cleared the route</h2><p>${state.hits} correct moves · ${state.misses} misses · best streak ${state.bestStreak}</p><div><button class="button primary" type="button" data-play-again>Play another run</button><a class="button secondary" href="/" data-link>Return home</a></div></div>`;
+    return `<div class="overlay-card result" role="dialog" aria-modal="true" aria-labelledby="overlay-title"><p class="result-mark" aria-hidden="true">✓</p><h2 id="overlay-title">The crew cleared the route</h2><p>${state.hits} correct moves · ${state.misses} misses · best streak ${state.bestStreak}</p><div><button class="button primary" type="button" data-play-again>Play another run</button><a class="button secondary" href="/" data-link>Return home</a></div></div>`;
   }
   if (state.phase === 'lost') {
-    return `<div class="overlay-card result"><p class="result-mark danger" aria-hidden="true">!</p><h2>Pressure reached 100</h2><p>The crew made ${state.hits} correct moves. Call each role before pressing.</p><div><button class="button primary" type="button" data-play-again>Try this run again</button><a class="button secondary" href="/" data-link>Return home</a></div></div>`;
+    return `<div class="overlay-card result" role="dialog" aria-modal="true" aria-labelledby="overlay-title"><p class="result-mark danger" aria-hidden="true">!</p><h2 id="overlay-title">Pressure reached 100</h2><p>The crew made ${state.hits} correct moves. Call each role before pressing.</p><div><button class="button primary" type="button" data-play-again>Try this run again</button><a class="button secondary" href="/" data-link>Return home</a></div></div>`;
   }
   return '';
 }
@@ -500,11 +494,29 @@ function updateGameDom(force = false): void {
   const showOverlay = game.phase !== 'active' || game.paused;
   if (overlay) {
     overlay.hidden = !showOverlay;
-    if (game.paused) overlay.innerHTML = `<div class="overlay-card"><p class="eyebrow">Run paused</p><h2>The crew is waiting</h2><p>Your route is saved in this browser.</p><button class="button primary" type="button" data-pause>Resume this run</button></div>`;
+    if (game.paused) overlay.innerHTML = `<div class="overlay-card" role="dialog" aria-modal="true" aria-labelledby="overlay-title"><p class="eyebrow">Run paused</p><h2 id="overlay-title">The crew is waiting</h2><p>Your route is saved in this browser.</p><button class="button primary" type="button" data-pause>Resume this run</button></div>`;
     else if (force || lastPhase !== game.phase) overlay.innerHTML = overlayMarkup(game);
+    setOverlayInteractivity(showOverlay, overlay, force || lastPhase !== game.phase);
   }
   if ((game.phase === 'won' || game.phase === 'lost') && lastPhase !== game.phase) finishRun(game);
   lastPhase = game.phase;
+}
+
+function setOverlayInteractivity(showOverlay: boolean, overlay: HTMLElement, changed: boolean): void {
+  const controls = app.querySelectorAll<HTMLElement>('a, button, input, select, textarea');
+  controls.forEach((control) => {
+    if (!overlay.contains(control)) control.inert = showOverlay;
+  });
+  if (showOverlay && changed) {
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && !overlay.contains(active)) returnFocus = active;
+    window.setTimeout(() => overlay.querySelector<HTMLElement>('button, a')?.focus(), 0);
+  }
+  if (!showOverlay && changed) {
+    const target = returnFocus;
+    returnFocus = null;
+    if (target?.isConnected) window.setTimeout(() => target.focus(), 0);
+  }
 }
 
 function finishRun(state: GameState): void {
