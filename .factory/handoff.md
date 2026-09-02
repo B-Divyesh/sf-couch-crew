@@ -4,12 +4,12 @@
 
 **PASS — repaired and deployed.**
 
-The repaired product source is commit `38810907d24b5c31e1f67e1732ea546725f95992` (`fix: harden realtime and deterministic replay`). Static production is deployed at <https://couch-crew.sociobot.in>. The product-owned realtime image is `ca45e8529f09acr.azurecr.io/sf-couch-crew-realtime:3881090` (digest `sha256:ca17676588fc8df4eb497c645068fa55fc05299b95fe51be971325a0c1d47666`) and its live health response reports that exact commit.
+The repaired static product source is commit `38810907d24b5c31e1f67e1732ea546725f95992` (`fix: harden realtime and deterministic replay`). A server-only follow-up, `7f9637ae39bd54a36dee559cc174518d5436f773`, keys rate limits to the proxy-nearest client address. Static production is deployed at <https://couch-crew.sociobot.in>. The product-owned realtime image is `ca45e8529f09acr.azurecr.io/sf-couch-crew-realtime:7f9637a` (digest `sha256:c90d213989e38b1fbea3c380ff1de4c3441bcba498171c981947550f044dc6dd`) and its live health response reports that exact follow-up commit.
 
 ## Repairs
 
 - Replaced the timeout-prone sequential browser click loops with deterministic scripted UI playthroughs. Full parallel `npm test` now proves the real win screen, replay reset, and all three missions without the prior 30-second failures.
-- Added an explicit realtime allowance: 60 health checks and 8 WebSocket handshakes per client per minute. Excess traffic receives `429 Too Many Requests` and a positive `Retry-After`; browser upgrades accept only Couch Crew or local-development origins.
+- Added an explicit realtime allowance: 60 health checks and 8 WebSocket handshakes per client per minute, keyed to the proxy-nearest client address. Excess traffic receives `429 Too Many Requests` and a positive `Retry-After`; browser upgrades accept only Couch Crew or local-development origins.
 - Upgraded runtime `ws` from 8.18.1 to 8.21.3. `npm audit --omit=dev` reports zero vulnerabilities.
 - Added immutable `buildId` to realtime health and passed the repair commit through the image build and Container App environment.
 - Made briefing, pause, win, and loss overlays modal dialogs. Focus enters the dialog, all obscured page controls are inert, and pause resume returns focus to the invoking control.
@@ -38,7 +38,7 @@ Live checks on 2026-09-02:
 - Live `/demo` browser checks: complete run, restart, service-worker offline reload, 390 px layout, and overlay focus/inert behavior passed (5/5).
 - `https://couch-crew.sociobot.in/definitely-missing-qa` returned HTTP 404 and the designed 404 document.
 - Fresh local and live static JavaScript SHA-256 matched: `1fe32dd600351f76ee3de725fbaae7a9977de0b32a0386eb5ccb4ef0cbe7c590`.
-- Live realtime health returned `{"service":"couch-crew-realtime","rooms":0,"buildId":"38810907d24b5c31e1f67e1732ea546725f95992"}`.
+- Live realtime health returned `{"service":"couch-crew-realtime","rooms":0,"buildId":"7f9637ae39bd54a36dee559cc174518d5436f773"}`.
 - Live probes reached the enforced policy: health returned 429 with `Retry-After: 14`; a hostile WebSocket Origin returned 403; a permitted origin exceeded its allowance and received 429 with `Retry-After: 31`.
 
 The standalone `@axe-core/cli` launcher could not find a system Chrome binary in this container. The repository’s Playwright `@axe-core/playwright` integration ran instead, locally and against the deployed site, using the preinstalled Chromium browser.
