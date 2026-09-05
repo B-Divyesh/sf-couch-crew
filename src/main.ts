@@ -154,8 +154,8 @@ function routeName(path: string): { title: string; description: string } {
 }
 
 function renderRoute(focus = false): void {
-  stopCurrentGame();
   const path = window.location.pathname.replace(/\/+$/, '') || '/';
+  stopCurrentGame(path !== '/demo');
   const meta = routeName(path);
   document.title = meta.title;
   document.querySelector<HTMLMetaElement>('meta[name="description"]')?.setAttribute('content', meta.description);
@@ -227,9 +227,9 @@ function navigate(path: string): void {
   renderRoute(true);
 }
 
-function stopCurrentGame(): void {
+function stopCurrentGame(persist = true): void {
   closeRealtime();
-  if (game && !game.demo) persistRun();
+  if (persist && game && !game.demo) persistRun();
   game = null;
   gameHost = null;
   lastPromptSerial = -1;

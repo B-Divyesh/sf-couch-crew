@@ -113,6 +113,19 @@ test('demo writes no game data @claim:demo-isolated', async ({ page }) => {
   const keys = await page.evaluate(() => Object.keys(localStorage));
   expect(keys.filter((key) => key.startsWith('couch-crew:'))).toEqual([]);
   await expect(page.getByText('Demo — sample data, nothing is saved')).toBeVisible();
+
+  await page.goto('/');
+  const realStorageBefore = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage)
+    .filter((key) => key.startsWith('couch-crew:'))
+    .map((key) => [key, localStorage.getItem(key)])));
+  await page.getByRole('link', { name: 'Try it with sample data', exact: true }).click();
+  await expect(page).toHaveURL('/demo');
+  await pressCorrect(page);
+  await page.getByRole('button', { name: 'Reset demo' }).click();
+  const realStorageAfter = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage)
+    .filter((key) => key.startsWith('couch-crew:'))
+    .map((key) => [key, localStorage.getItem(key)])));
+  expect(realStorageAfter).toEqual(realStorageBefore);
 });
 
 test('demo makes only same-origin requests @claim:local-privacy', async ({ browser, baseURL }) => {
