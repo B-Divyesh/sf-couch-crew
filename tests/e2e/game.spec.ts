@@ -163,8 +163,8 @@ test('demo reloads offline after the first visit @claim:offline-reload', async (
   await context.close();
 });
 
-test('home and demo pass automated accessibility checks', async ({ page }) => {
-  for (const path of ['/', '/demo', '/controller', '/privacy', '/terms']) {
+test('home, legal, and not-found routes pass automated accessibility checks', async ({ page }) => {
+  for (const path of ['/', '/demo', '/controller', '/privacy', '/terms', '/not-found']) {
     await page.goto(path);
     const results = await new AxeBuilder({ page: page as never }).analyze();
     expect(results.violations.filter((violation) => ['serious', 'critical'].includes(violation.impact ?? ''))).toEqual([]);
@@ -176,7 +176,7 @@ test('home and demo pass automated accessibility checks', async ({ page }) => {
 
 test('mobile layout stays inside a 390 pixel viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  for (const path of ['/', '/demo', '/controller', '/privacy', '/terms']) {
+  for (const path of ['/', '/demo', '/controller', '/privacy', '/terms', '/not-found']) {
     await page.goto(path);
     expect(await page.evaluate(() => document.documentElement.scrollWidth), `${path} viewport width`).toBeLessThanOrEqual(390);
     const targets = await page.locator('a, button, select, input:not([type="checkbox"]), label:has(input[type="checkbox"])').evaluateAll((elements) => elements
@@ -193,6 +193,36 @@ test('mobile layout stays inside a 390 pixel viewport', async ({ page }) => {
       expect(target.width, `${path}: ${target.label} width`).toBeGreaterThanOrEqual(44);
       expect(target.height, `${path}: ${target.label} height`).toBeGreaterThanOrEqual(44);
     }
+  }
+});
+
+test('the real 404 page gives phone users a complete recovery footer', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const response = await page.goto('/not-found');
+  expect(response?.status()).toBe(404);
+  await expect(page).toHaveTitle('Page not found — Couch Crew');
+  await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+
+  const footer = page.getByRole('contentinfo');
+  await expect(footer.getByRole('link', { name: 'Privacy', exact: true })).toBeVisible();
+  await expect(footer.getByRole('link', { name: 'Terms', exact: true })).toBeVisible();
+  await expect(footer.getByRole('link', { name: /Built by Param Factory/ })).toBeVisible();
+  await expect(footer).toContainText('Version 1.0.0');
+
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  const targets = await page.locator('a, button').evaluateAll((elements) => elements
+    .filter((element) => {
+      const style = getComputedStyle(element);
+      const box = element.getBoundingClientRect();
+      return style.display !== 'none' && style.visibility !== 'hidden' && box.width > 0 && box.height > 0;
+    })
+    .map((element) => {
+      const box = element.getBoundingClientRect();
+      return { label: element.textContent?.trim() || element.getAttribute('aria-label') || element.tagName, width: box.width, height: box.height };
+    }));
+  for (const target of targets) {
+    expect(target.width, `/not-found: ${target.label} width`).toBeGreaterThanOrEqual(44);
+    expect(target.height, `/not-found: ${target.label} height`).toBeGreaterThanOrEqual(44);
   }
 });
 

@@ -8,7 +8,7 @@
     "lint": "eslint src tests realtime playwright.config.ts playwright.performance.config.ts",
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview --host 127.0.0.1",
+    "preview": "node scripts/preview.mjs",
     "realtime": "node realtime/server.mjs",
     "test": "npm run test:unit && npm run test:realtime && npm run test:policy && npm run test:e2e",
     "test:unit": "vitest run tests/core.test.ts",

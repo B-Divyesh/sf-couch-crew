@@ -139,7 +139,7 @@ function termsPage(): string {
 }
 
 function notFoundPage(): string {
-  return shell(`<main id="main" class="not-found"><p class="error-code">404</p><h1 tabindex="-1">This route left the map</h1><p>The page does not exist. Return to the crew screen and start a room.</p><a class="button primary" href="/" data-link>Return to Couch Crew</a></main>`);
+  return shell(`<main id="main" class="not-found"><p class="error-code">404</p><h1 tabindex="-1">Page not found</h1><p>The address does not match a Couch Crew page. Return to the shared game screen.</p><a class="button primary" href="/" data-link>Return to Couch Crew</a></main>`);
 }
 
 function routeName(path: string): { title: string; description: string } {
