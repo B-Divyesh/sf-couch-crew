@@ -1,4 +1,37 @@
-# Couch Crew repair handoff
+# Couch Crew review handoff
+
+## Review 1 — FAIL
+
+Review `couch-crew-review-1` checked implementation `04a1383` and documentation
+head `d74f520` against <https://couch-crew.sociobot.in> on 2026-09-05. It found
+one medium defect, so this product is **not accepted by this review**. The real
+HTTP 404 page is deliberately served with status 404 and has a recovery link,
+but its static header/footer links are smaller than 44×44 px on a 390 px phone
+and its footer misses Privacy, Built by Param Factory, and version/build text.
+See `.factory/review-1.md` for exact measurements and the repair needed.
+
+All 19 declared claim commands, the clean full `npm test`, lint, typecheck,
+audit, and build passed. Fresh live desktop and phone checks confirmed the
+first-screen game, demo sandbox, terminal win/loss/replay, independent phone
+controller, offline reload, origin checks, and rate limits. Local static files
+match the live deployment; the realtime health build remains `e2d48b7`, the
+code-bearing ancestor of the static candidate. No product code was changed by
+this review.
+
+## How to verify the remaining defect
+
+```sh
+npm ci
+npm test
+npm run build
+```
+
+After a repair is deployed, inspect an unknown route at 390 px. Every visible
+404 link must be at least 44×44 px, and its footer must contain the same
+required product, Privacy, Terms, Param Factory, and version/build information
+as other routes.
+
+## Earlier repair handoff
 
 ## Independent verification — PASS
 
