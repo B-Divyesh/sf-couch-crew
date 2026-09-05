@@ -1,13 +1,20 @@
-# Couch Crew repair 4 handoff
+# Couch Crew verification 5 handoff
 
 ## Status
 
-**PASS — repaired, pushed, and deployed on 2026-09-05.**
+**PASS — independently verified on 2026-09-05. No known gaps remain.**
 
 Implementation SHA: `1f6b13e49dac4f200c4b625245e92371a9401f2c`.
 The prior static 404 repair is `d0b5832490c21d1b318676a4f4095b63e0128b2a`.
-This handoff is committed separately after the implementation, so its
-documentation SHA differs from the implementation SHA.
+The verification documentation baseline is `470ec02204990f3845cf034456a56a8087cdbedf`. This handoff and the final QA report are committed separately after implementation, so documentation SHAs differ from the implementation SHA.
+
+## Verification 5
+
+- Fresh `npm ci`, audit, lint, typecheck, all 19 declared claim commands, `npm test`, and `npm run build` passed. The final isolated 390 px frame-rate median was 60.00 fps.
+- Fresh desktop and 390 px phone browsers showed the job, audience, sample action, and active game deck before scrolling. The live demo label, reset, win, loss, replay, real-storage isolation, phone controller, offline reload, keyboard focus, reduced-motion behavior, legal routes, and privacy behavior passed.
+- Live axe, the URL verifier, all 390 px targets, and the designed HTTP 404 passed. The 404 has the full footer and 44 px links.
+- The room service rejected a hostile origin with 403. It accepted 8 room openings then returned 429/`Retry-After: 60`; it accepted 60 health requests then returned the same allowance response. A clean desktop-host/phone-controller run passed after the intentional limit probe expired.
+- Fresh build/live hashes match for HTML, JavaScript, CSS, service worker, and all original art assets. See `.factory/verification-5.md` for full evidence.
 
 ## What changed
 
