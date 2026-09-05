@@ -1,104 +1,65 @@
-# Couch Crew verification 5 handoff
+# Couch Crew review 2 handoff
 
 ## Status
 
-**PASS — independently verified on 2026-09-05. No known gaps remain.**
+**FAIL — one medium finding and zero untested public claims.**
 
-Implementation SHA: `1f6b13e49dac4f200c4b625245e92371a9401f2c`.
-The prior static 404 repair is `d0b5832490c21d1b318676a4f4095b63e0128b2a`.
-The verification documentation baseline is `470ec02204990f3845cf034456a56a8087cdbedf`. This handoff and the final QA report are committed separately after implementation, so documentation SHAs differ from the implementation SHA.
+Implementation reviewed:
+`1f6b13e49dac4f200c4b625245e92371a9401f2c`.
+Prior documentation baseline:
+`470ec02204990f3845cf034456a56a8087cdbedf`.
+Review starting head:
+`4d4ac232f535c942f7ba7543fe39dcaeb0b20a0b`.
 
-## Verification 5
+No product code was changed. See `.factory/review-2.md` for the full evidence.
 
-- Fresh `npm ci`, audit, lint, typecheck, all 19 declared claim commands, `npm test`, and `npm run build` passed. The final isolated 390 px frame-rate median was 60.00 fps.
-- Fresh desktop and 390 px phone browsers showed the job, audience, sample action, and active game deck before scrolling. The live demo label, reset, win, loss, replay, real-storage isolation, phone controller, offline reload, keyboard focus, reduced-motion behavior, legal routes, and privacy behavior passed.
-- Live axe, the URL verifier, all 390 px targets, and the designed HTTP 404 passed. The 404 has the full footer and 44 px links.
-- The room service rejected a hostile origin with 403. It accepted 8 room openings then returned 429/`Retry-After: 60`; it accepted 60 health requests then returned the same allowance response. A clean desktop-host/phone-controller run passed after the intentional limit probe expired.
-- Fresh build/live hashes match for HTML, JavaScript, CSS, service worker, and all original art assets. See `.factory/verification-5.md` for full evidence.
+## Finding to repair
 
-## What changed
+The room backend correctly returns HTTP 429 with `Retry-After` after eight
+WebSocket openings, but a rate-limited phone remains on **Joining room…**. It
+does not say that the join failed or when to retry. This was reproduced on the
+live 390 px controller and recorded at
+`/work/.evidence/review-2/live-controller-rate-limit.png`.
 
-- Rebuilt the real static 404 shell with plain recovery text, the standard
-  header links, and the complete product footer: Privacy, Terms, Built by
-  Param Factory, and version/art provenance.
-- Made every visible 404 link at least 44 by 44 CSS px on a 390 px phone.
-- Added route metadata to the standalone 404 page and kept the designed HTTP
-  404 response rather than turning it into a 200 response.
-- Added an outcome-based browser regression for `/not-found`: it requires HTTP
-  404, the complete footer, no horizontal overflow, and 44 px touch targets.
-  Automated axe coverage and the mobile target regression now include the real
-  not-found route.
-- Replaced local preview with a small static-server equivalent that honors the
-  production public route rewrites and real 404 fallback. This lets browser
-  tests exercise `/not-found` as a 404 locally.
-- Fixed an isolation edge found during live verification: entering demo mode no
-  longer re-saves an unfinished real run. The expanded `demo-isolated` claim
-  proves a direct demo writes no product keys and a demo/reset flow leaves an
-  existing real-storage snapshot unchanged.
-- Added `.factory/catalog-description.txt` and copied the verb-first catalog
-  description to `/work/.evidence/catalog-description.txt`.
+Handle a controller socket that closes before the `joined` message. Show a
+plain retry message, keep **Join room** available, and add a production-like
+rate-limit UI regression. Then deploy and repeat the boundary plus successful
+post-reset join.
 
-## First screen
+## What passed
 
-- Job: coordinate a three-mission cooperative heist from different phones.
-- Audience: 3–6 friends or family members in one room.
-- First action: **Try it with sample data**. It opens an active seeded mission.
+- All 19 exact claim commands passed from a clean detached checkout after
+  `npm ci`; there are zero untested public claims.
+- `npm audit --omit=dev`, lint, typecheck, the consolidated `npm test`, and
+  build passed. `dist/` was produced.
+- Fresh local and live hashes match for HTML, JavaScript, CSS, service worker,
+  and art. Live runtime is the reviewed implementation.
+- Fresh desktop and 390 px phone first screens showed the job, room audience,
+  sample action, and playable command deck before scrolling.
+- Demo label, realistic seeded state, reset, real-storage isolation, offline
+  reload, settings persistence, keyboard/touch, pause focus, reduced motion,
+  and win/loss/replay all passed.
+- A live correct run ended at 48 moves and zero misses. A live wrong-input run
+  reached pressure 100.
+- One host and five independent phones received all five roles. A phone action
+  locked the host move; a disconnected phone rejoined the same room.
+- Live axe checks passed all routes and the real 404. The URL verifier passed.
+  Lighthouse mobile scored 100 in Performance, Accessibility, Best Practices,
+  and SEO; LCP was 1.5 s and CLS 0.007.
+- The room service rejected a hostile Origin with 403. It allowed eight socket
+  openings and 60 health requests, then returned 429 with `Retry-After`.
 
-Fresh 1366×900 desktop and 390×844 phone contexts showed the headline,
-audience sentence, exact sample action, and active game deck before scrolling.
-The live captures were visually reviewed.
-
-## Verification
-
-Clean setup began with `npm ci` (zero audit vulnerabilities). Every one of the
-19 exact commands in `.factory/claims.json` passed on the final implementation.
-The consolidated final gates also passed:
+## Verification commands
 
 ```text
-npm run lint       PASS
-npm run typecheck  PASS
-npm audit --omit=dev  PASS (0 vulnerabilities)
-npm test           PASS
-npm run build      PASS
+npm ci
+npm audit --omit=dev
+npm run lint
+npm run typecheck
+# run every test command in .factory/claims.json
+npm test
+npm run build
 ```
 
-`npm test` passed 8 unit tests, 3 realtime tests, 3 deployment-policy tests,
-20 browser tests, and the isolated performance test. The final 390 px samples
-were 60.01, 60.01, 60.00, 60.00, and 60.00 fps (median 60.00 fps). The build
-creates `dist/`; initial JavaScript is 26.83 kB (9.29 kB gzip) and CSS is
-18.79 kB (5.00 kB gzip).
-
-## Live deployment and checks
-
-The final `dist/` was deployed with the product's existing static deployment.
-The live JavaScript hash matches the local final build:
-
-```text
-46b1adf42500e147164caa7e8894a8119bafd66b963e8ec842beb998c3b55565
-```
-
-- `verify-url.sh` on the live home page passed: HTTP 200, 665 ms load, correct
-  title and language, one h1, main landmark, zero missing alt text, zero
-  unlabeled buttons, and zero page/console errors.
-- Live Playwright axe checks passed on home, demo, controller, privacy, terms,
-  and the real 404 route with no serious or critical issues. The live 404
-  mobile/footer regression also passed.
-- The live 404 returned HTTP 404, rendered **Page not found**, had no horizontal
-  overflow at 390 px, and all visible links/buttons measured at least 44 px in
-  each dimension. Its expected browser resource message for a 404 navigation is
-  classified as an expected HTTP status, not a page defect.
-- Live demo opened at `4 / 12`, showed the persistent sample label, advanced to
-  `5 / 12`, reset to `4 / 12`, reached both the win and loss end screens, and
-  replayed to `4 / 12`. It left the pre-existing real local-storage snapshot
-  unchanged.
-- A fresh desktop host and independent 390 px phone completed the live
-  phone-controller claim. The product-owned room service health endpoint is
-  unchanged and reports build `e2d48b7435badb3b64b6daabc540da3d2550a1e4`.
-  Its live health allowance accepted 60 requests; the next returned HTTP 429
-  with `Retry-After: 53`.
-
-## Earlier findings
-
-All findings in the prior verification history remain resolved. Review 1's
-sole outstanding medium finding (the static 404 mobile targets and incomplete
-footer) is resolved by this release. No known gaps remain.
+The review report is also copied to `/work/.evidence/qa-report.md`. The machine
+result is `/work/.evidence/qa-result.json`.
