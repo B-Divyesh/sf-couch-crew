@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { createRealtimeServer, RATE_LIMIT_POLICY } from '../../realtime/server.mjs';
 
 async function pressCorrect(page: Page): Promise<void> {
   const action = (await page.locator('[data-call-action]').textContent())?.trim() ?? '';
@@ -105,6 +106,68 @@ test('a phone joins an anonymous room and receives only its role controls @claim
   await expect(host.locator('[data-room-status]')).toContainText('1 of 5 phones joined');
   await hostContext.close();
   await phoneContext.close();
+});
+
+test('a rate-limited phone gets retry guidance and joins after the allowance resets @claim:rate-limit-recovery', async ({ browser, baseURL }) => {
+  let now = Date.now();
+  const rateServer = createRealtimeServer({ port: 0, now: () => now });
+  await rateServer.listen();
+  const address = rateServer.http.address();
+  if (!address || typeof address === 'string') throw new Error('The rate-limit test server did not expose a TCP port.');
+  const socketUrl = `ws://127.0.0.1:${address.port}`;
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+
+  try {
+    await context.addInitScript((target) => {
+      const NativeWebSocket = window.WebSocket;
+      window.WebSocket = class extends NativeWebSocket {
+        constructor(_url: string | URL, protocols?: string | string[]) {
+          if (protocols === undefined) super(target);
+          else super(target, protocols);
+        }
+      } as typeof WebSocket;
+    }, socketUrl);
+
+    const host = await context.newPage();
+    await host.goto(baseURL!);
+    await expect(host.locator('[data-controller-url]')).toHaveAttribute('href', /\/controller\?room=/);
+    const controllerHref = await host.locator('[data-controller-url]').getAttribute('href');
+    const code = new URL(controllerHref!, baseURL).searchParams.get('room')!;
+
+    const filler = await context.newPage();
+    await filler.goto(`${baseURL}/controller`);
+    const opened = await filler.evaluate(async (count) => {
+      const sockets: WebSocket[] = [];
+      for (let index = 0; index < count; index += 1) {
+        const socket = new WebSocket('ws://rate-limit-test.invalid');
+        sockets.push(socket);
+        await new Promise<void>((resolve, reject) => {
+          socket.addEventListener('open', () => resolve(), { once: true });
+          socket.addEventListener('error', () => reject(new Error(`Socket ${index + 1} was rejected before the allowance boundary.`)), { once: true });
+        });
+      }
+      Object.assign(window, { __couchCrewRateLimitSockets: sockets });
+      return sockets.length;
+    }, RATE_LIMIT_POLICY.websocket.limit - 1);
+    expect(opened).toBe(7);
+
+    const phone = await context.newPage();
+    await phone.goto(`${baseURL}/controller?room=${code}`);
+    const joinButton = phone.getByRole('button', { name: 'Join room' });
+    await joinButton.click();
+    await expect(phone.getByText('The room service is busy. Wait one minute, then join again.')).toBeVisible();
+    await expect(joinButton).toBeEnabled();
+    await expect(phone.locator('[data-controller-status]')).not.toHaveText('Joining room…');
+
+    now += RATE_LIMIT_POLICY.websocket.windowMs;
+    await joinButton.click();
+    await expect(phone.getByText(`Joined room ${code}. Your controls are ready.`)).toBeVisible();
+    await expect(phone.locator('.phone-role')).toHaveCount(1);
+    await expect(host.locator('[data-room-status]')).toContainText('1 of 5 phones joined');
+  } finally {
+    await context.close();
+    await rateServer.close();
+  }
 });
 
 test('demo writes no game data @claim:demo-isolated', async ({ page }) => {

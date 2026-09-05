@@ -119,6 +119,13 @@
     "sandbox": "ephemeral local room server with production limits; assert openings 1–8 and health checks 1–60 pass, then assert each next request returns 429 and Retry-After 60"
   },
   {
+    "id": "rate-limit-recovery",
+    "claim": "A rate-limited phone is told to wait one minute and can join after the allowance resets.",
+    "where": "phone controller retry state",
+    "test": "npm run test:browser -- --grep @claim:rate-limit-recovery",
+    "sandbox": "fresh 390 px phone and an ephemeral room service with the production eight-opening, one-minute allowance; exhaust the allowance, assert visible retry guidance and an enabled Join room action, advance the server clock one minute, then join the same room"
+  },
+  {
     "id": "recovery-deletion",
     "claim": "A completed or lost run removes its recovery save.",
     "where": "privacy page",

@@ -324,12 +324,22 @@ function createHostRoom(playerCount: number): void {
 function joinController(code: string): void {
   closeRealtime();
   setControllerStatus('Joining room…');
-  try { realtime = new WebSocket(REALTIME_URL); } catch { setControllerStatus('The phone link is unavailable. Try again.'); return; }
-  realtime.addEventListener('open', () => sendSignal({ type: 'join', code }));
-  realtime.addEventListener('message', (event) => {
+  let socket: WebSocket;
+  try { socket = new WebSocket(REALTIME_URL); } catch { setControllerStatus('The phone link is unavailable. Try again.'); return; }
+  realtime = socket;
+  let joined = false;
+  const showJoinFailure = () => {
+    if (realtime !== socket || joined) return;
+    controller = null;
+    document.querySelector<HTMLElement>('#controller-game')?.replaceChildren();
+    setControllerStatus('The room service is busy. Wait one minute, then join again.');
+  };
+  socket.addEventListener('open', () => sendSignal({ type: 'join', code }));
+  socket.addEventListener('message', (event) => {
     const message = parseSignal(event.data);
     if (!message) return;
     if (message.type === 'joined') {
+      joined = true;
       const roomCode = String(message.code);
       controller = { code: roomCode, playerId: Number(message.playerId), roleIndexes: message.roleIndexes as number[], snapshot: null };
       setControllerStatus(`Joined room ${roomCode}. Your controls are ready.`);
@@ -343,8 +353,12 @@ function joinController(code: string): void {
       document.querySelector<HTMLElement>('#controller-game')!.innerHTML = '';
     } else if (message.type === 'error') setControllerStatus(String(message.message));
   });
-  realtime.addEventListener('close', () => {
-    if (controller) setControllerStatus('The phone link closed. Join the room again.');
+  socket.addEventListener('error', showJoinFailure);
+  socket.addEventListener('close', () => {
+    if (realtime !== socket) return;
+    if (!joined) showJoinFailure();
+    else if (controller) setControllerStatus('The phone link closed. Join the room again.');
+    realtime = null;
   });
 }
 

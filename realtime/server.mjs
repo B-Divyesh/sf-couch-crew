@@ -22,20 +22,20 @@ function clientAddress(request) {
   return request.socket.remoteAddress || 'unknown';
 }
 
-function makeAllowance(limits) {
+function makeAllowance(limits, now) {
   const buckets = new Map();
   return (kind, request) => {
     const policy = limits[kind];
     const key = `${kind}:${clientAddress(request)}`;
-    const now = Date.now();
+    const requestedAt = now();
     const current = buckets.get(key);
-    const bucket = !current || now >= current.resetAt
-      ? { count: 0, resetAt: now + policy.windowMs }
+    const bucket = !current || requestedAt >= current.resetAt
+      ? { count: 0, resetAt: requestedAt + policy.windowMs }
       : current;
     bucket.count += 1;
     buckets.set(key, bucket);
     if (bucket.count <= policy.limit) return null;
-    return Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
+    return Math.max(1, Math.ceil((bucket.resetAt - requestedAt) / 1000));
   };
 }
 
@@ -69,9 +69,10 @@ export function createRealtimeServer({
   buildId = process.env.BUILD_ID || process.env.GITHUB_SHA || 'development',
   limits = RATE_LIMIT_POLICY,
   isOriginAllowed = defaultOriginAllowed,
+  now = Date.now,
 } = {}) {
   const rooms = new Map();
-  const allow = makeAllowance(limits);
+  const allow = makeAllowance(limits, now);
 
   function roomState(room) {
     return {
